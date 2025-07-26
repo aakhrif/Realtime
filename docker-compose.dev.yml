@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Development Next.js Application
+  realtime-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - realtime-dev-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Redis for Development
+  redis-dev:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    networks:
+      - realtime-dev-network
+    restart: unless-stopped
+
+networks:
+  realtime-dev-network:
+    driver: bridge
