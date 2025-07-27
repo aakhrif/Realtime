@@ -1,16 +1,19 @@
 version: '3'
 
 services:
-  # Next.js Application
+  # Next.js Application (direkt exposed für deinen Nginx)
   realtime-app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:3000"  # Next.js App
+      - "3001:3001"  # Socket.IO Server
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - SOCKET_PORT=3001
     networks:
       - realtime-network
     restart: unless-stopped
