@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { VideoRoom } from '@/components/VideoRoom';
+import { VideoRoomV2 } from '@/components/VideoRoomV2';
 
 export default function VideoTestPage() {
   const [roomId, setRoomId] = useState('video-test-room'); 
@@ -24,7 +24,7 @@ export default function VideoTestPage() {
         <div className="bg-red-900 text-white p-2 text-center font-bold">
           🧪 ECHTE WEBRTC VIDEO-KOMPONENTE TEST
         </div>
-        <VideoRoom 
+        <VideoRoomV2 
           roomId={roomId} 
           userName={userName} 
           onLeaveRoom={leaveRoom}

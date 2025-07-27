@@ -176,6 +176,8 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           <UserList
             users={roomUsers}
             currentUserId={socket?.id || ''}
+            peers={peers}
+            localStream={localStream}
           />
         </div>
       </div>
