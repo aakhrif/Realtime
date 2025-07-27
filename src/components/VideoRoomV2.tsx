@@ -159,46 +159,29 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-      {/* Left Side: Video Grid */}
-      <div className="flex-1 flex flex-col">
-        {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-          </div>
-        ) : (
-          <VideoGrid
-            localStream={localStream}
-            peers={peers}
-            userName={userName}
-            isLoading={false}
-          />
-        )}
-      </div>
-
-        {/* Right Side: User List & Chat */}
-        <div className="w-80 flex flex-col border-l border-gray-700">
-          {/* User List */}
-          <div className="h-64 border-b border-gray-700">
-            <UserList
-              users={roomUsers}
-              currentUserId={socket?.id || ''}
-              currentUserName={userName}
-            />
-          </div>
-
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
+        {/* Chat-Bereich: nimmt volle Breite/Höhe bis zur UserList ein */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-y-auto">
             <ChatArea messages={chatMessages} />
+          </div>
+          <div className="border-t border-gray-700">
             <ChatInput 
               onSendMessage={handleSendMessage}
               disabled={!socket}
             />
           </div>
         </div>
+        {/* UserList fixiert rechts */}
+        <div className="w-80 flex flex-col border-l border-gray-700">
+          <UserList
+            users={roomUsers}
+            currentUserId={socket?.id || ''}
+          />
+        </div>
       </div>
 
       {/* Controls */}
-      {!isLoading && (
+      {/* {!isLoading && (
         <div id="video-controls-bar" className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
           <VideoControls
             isVideoEnabled={isVideoEnabled}
@@ -211,7 +194,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
             onLeaveCall={onLeaveRoom}
           />
         </div>
-      )}
+      )} */}
 
       {/* Debug Panel */}
       <RoomDebugger roomId={roomId} />
