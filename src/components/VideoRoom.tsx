@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { VideoControls } from '@/components/VideoControls';
 import { RoomDebugger } from '@/components/RoomDebugger';
+import SocketManager from '@/lib/socketManager';
 
 interface VideoRoomProps {
   roomId: string;
@@ -23,37 +24,26 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize socket connection
+  // Initialize socket connection using singleton
   useEffect(() => {
-    console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
+    console.log('🔌 VideoRoom: Getting socket from SocketManager...');
     
-    const newSocket = io({
-      path: '/api/socket',
-      transports: ['polling'], // Nur Polling - kein WebSocket
-      timeout: 20000,
-      forceNew: true,
-      upgrade: false // WebSocket-Upgrade deaktivieren
-    });
-
-    newSocket.on('connect', () => {
-      console.log('✅ VideoRoom: Socket connected:', newSocket.id);
-      setSocket(newSocket);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('❌ VideoRoom: Socket disconnected');
-    });
-
-    newSocket.on('error', (err) => {
-      console.error('❌ VideoRoom: Socket error:', err);
-    });
+    SocketManager.getSocket()
+      .then((socketInstance) => {
+        console.log('✅ VideoRoom: Socket received from manager:', socketInstance.id);
+        setSocket(socketInstance);
+      })
+      .catch((error) => {
+        console.error('❌ VideoRoom: Failed to get socket:', error);
+      });
 
     return () => {
-      console.log('🔌 VideoRoom: Cleaning up socket connection');
-      newSocket.disconnect();
+      console.log('🔌 VideoRoom: Component unmounting - keeping socket alive');
+      // Don't disconnect - let SocketManager handle it
     };
   }, []);
 
+  // Always call useWebRTC hook, but pass null socket if not ready
   const {
     localStream,
     peers,

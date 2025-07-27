@@ -189,8 +189,14 @@ export const useWebRTC = (roomId: string, userName: string, socket: Socket | nul
 
   // Initialize WebRTC when room and user are ready
   useEffect(() => {
-    const socket = socketRef.current;
-    if (!socket || !roomId || !userName) return;
+    if (!socket || !roomId || !userName) {
+      console.log('⏳ useWebRTC: Waiting for socket, roomId, or userName...', { 
+        hasSocket: !!socket, 
+        roomId, 
+        userName 
+      });
+      return;
+    }
 
     console.log(`🚪 Setting up WebRTC for room: ${roomId}, user: ${userName}`);
 
@@ -337,7 +343,7 @@ export const useWebRTC = (roomId: string, userName: string, socket: Socket | nul
         localStreamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [roomId, userName, initialStream, getUserMedia, createPeer]);
+  }, [socket, roomId, userName, initialStream, getUserMedia, createPeer]);
 
   return {
     localStream,
