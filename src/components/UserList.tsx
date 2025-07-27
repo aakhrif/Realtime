@@ -1,26 +1,19 @@
 
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { UserInfo } from '@/hooks/useSocket';
 
 interface UserListProps {
   users: UserInfo[];
   currentUserId: string;
-  currentUserName: string;
 }
 
-export const UserList: React.FC<UserListProps> = ({ 
-  users, 
-  currentUserId, 
-  currentUserName 
-}) => {
 
-  // Local state for current user's media
-  const [myMedia, setMyMedia] = useState<{ video: boolean; audio: boolean }>({ video: true, audio: true });
+export const UserList: React.FC<UserListProps> = ({ users, currentUserId }) => {
 
+  // ...keine lokale Media-State mehr, alle User kommen aus props...
   const allUsers = [
-    { id: currentUserId, name: currentUserName, room: '', mediaState: myMedia }, // Current user
-    ...users.filter(user => user.id !== currentUserId) // Other users
+    ...users
   ];
 
   return (

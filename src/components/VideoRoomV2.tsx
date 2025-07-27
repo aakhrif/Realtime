@@ -199,7 +199,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
 
       {/* Controls */}
       {!isLoading && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
+        <div id="video-controls-bar" className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
           <VideoControls
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
