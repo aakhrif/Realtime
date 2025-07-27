@@ -9,7 +9,13 @@ export interface PeerConnection {
   stream?: MediaStream;
 }
 
-export const useWebRTC = (roomId: string, userName: string, socket: Socket | null, initialStream?: MediaStream | null) => {
+export const useWebRTC = (
+  roomId: string, 
+  userName: string, 
+  socket: Socket | null, 
+  initialStream?: MediaStream | null,
+  enableMedia: boolean = true // New: Allow disabling media
+) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(initialStream || null);
   const [peers, setPeers] = useState<Map<string, PeerConnection>>(new Map());
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -207,24 +213,36 @@ export const useWebRTC = (roomId: string, userName: string, socket: Socket | nul
       if (!mounted) return;
       
       try {
-        // Use initial stream if provided, otherwise get user media
-        let stream: MediaStream;
+        // Use initial stream if provided, otherwise get user media (if enabled)
+        let stream: MediaStream | null = null;
         if (initialStream) {
           stream = initialStream;
           setLocalStream(stream);
           localStreamRef.current = stream;
           setError(null);
-        } else {
+        } else if (enableMedia) {
+          // Only try to get media if enabled
           stream = await getUserMedia();
+        } else {
+          // Join without media - just audio/video call participation without own stream
+          console.log('🔇 Joining room without media access');
+          setLocalStream(null);
+          localStreamRef.current = null;
+          setError(null);
         }
         
         if (mounted && socket.connected) {
-          console.log(`🚪 Joining room ${roomId} as ${userName}`);
+          console.log(`🚪 Joining room ${roomId} as ${userName}${enableMedia ? ' (with media)' : ' (media-free)'}`);
           socket.emit('join-room', { room: roomId, name: userName });
         }
       } catch (err) {
         console.error('Failed to initialize WebRTC:', err);
-        setError('Failed to initialize video/audio. Please check permissions.');
+        if (enableMedia) {
+          setError('Failed to initialize video/audio. Please check permissions.');
+        } else {
+          // If media was disabled, this shouldn't be an error
+          setError(null);
+        }
       }
     };
 
@@ -343,7 +361,7 @@ export const useWebRTC = (roomId: string, userName: string, socket: Socket | nul
         localStreamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [socket, roomId, userName, initialStream, getUserMedia, createPeer]);
+  }, [socket, roomId, userName, initialStream, enableMedia, getUserMedia, createPeer]);
 
   return {
     localStream,

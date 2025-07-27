@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 interface MediaPermissionProps {
   onPermissionGranted: (stream: MediaStream) => void;
   onPermissionDenied: (error: string) => void;
+  onEnterWithoutMedia?: () => void; // New: Allow entering without media
 }
 
 // Mobile Detection
@@ -21,7 +22,8 @@ const isSecureContext = () => {
 
 export const MediaPermission: React.FC<MediaPermissionProps> = ({
   onPermissionGranted,
-  onPermissionDenied
+  onPermissionDenied,
+  onEnterWithoutMedia
 }) => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -283,10 +285,32 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
           )}
         </button>
 
+        {/* Enter without media button */}
+        {onEnterWithoutMedia && (
+          <button
+            onClick={onEnterWithoutMedia}
+            disabled={isRequesting}
+            className="w-full mt-3 font-medium py-3 px-6 rounded-lg transition duration-200 bg-gray-600 hover:bg-gray-700 text-white border border-gray-500"
+          >
+            <div className="flex items-center justify-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+              </svg>
+              Enter room (without camera/microphone)
+            </div>
+          </button>
+        )}
+
         <div className="mt-4">
           <p className="text-xs text-gray-500">
             Sie können die Berechtigungen jederzeit in Ihren Browser-Einstellungen ändern
           </p>
+          {onEnterWithoutMedia && (
+            <p className="text-xs text-gray-400 mt-2">
+              💡 <strong>Tipp:</strong> Treten Sie ohne Medien bei, um CPU-Ressourcen zu sparen und nur zu chatten/zuschauen
+            </p>
+          )}
         </div>
       </div>
     </div>

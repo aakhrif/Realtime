@@ -13,13 +13,15 @@ interface VideoRoomProps {
   userName: string;
   onLeaveRoom: () => void;
   initialStream?: MediaStream | null;
+  mediaEnabled?: boolean; // New: Allow joining without media
 }
 
 export const VideoRoom: React.FC<VideoRoomProps> = ({
   roomId,
   userName,
   onLeaveRoom,
-  initialStream = null
+  initialStream = null,
+  mediaEnabled = true // Default: try to get media
 }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +57,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     toggleAudio,
     getScreenShare,
     stopScreenShare
-  } = useWebRTC(roomId, userName, socket, initialStream);
+  } = useWebRTC(roomId, userName, socket, initialStream, mediaEnabled);
 
   useEffect(() => {
     if (localStream) {

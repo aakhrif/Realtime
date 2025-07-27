@@ -39,6 +39,13 @@ export default function RoomPage() {
     setPermissionError(error);
   };
 
+  const handleEnterWithoutMedia = () => {
+    // Enter room without media stream
+    setMediaStream(null);
+    setPermissionError(null);
+    setRoomState('video-room');
+  };
+
   const handleLeaveRoom = () => {
     // Cleanup media stream
     if (mediaStream) {
@@ -99,6 +106,7 @@ export default function RoomPage() {
         <MediaPermission
           onPermissionGranted={handlePermissionGranted}
           onPermissionDenied={handlePermissionDenied}
+          onEnterWithoutMedia={handleEnterWithoutMedia}
         />
         
         {/* Header with room info and back button */}
@@ -139,9 +147,10 @@ export default function RoomPage() {
     return (
       <VideoRoom
         roomId={roomId}
-        userName={userName}
+        userName={userName!} // We've validated this is not null
         onLeaveRoom={handleLeaveRoom}
         initialStream={mediaStream}
+        mediaEnabled={!!mediaStream} // If we have a stream, media is enabled
       />
     );
   }
