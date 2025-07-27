@@ -28,7 +28,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
     
     const newSocket = io({
-      path: '/socket.io/', // Standard Socket.IO Pfad - wird von Nginx zu /api/socket gemapped
+      path: '/api/socket', // Zurück zum Next.js API Route Pfad
       transports: ['polling', 'websocket'],
       timeout: 20000,
       forceNew: true
