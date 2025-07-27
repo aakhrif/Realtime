@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TestMode } from '@/components/TestMode';
 
 export default function TestPage() {
-  const [roomId, setRoomId] = useState('');
+  const [roomId, setRoomId] = useState('test-room-123'); // Hardcoded für Testing
   const [userName, setUserName] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
 

@@ -76,21 +76,31 @@ export const TestMode: React.FC<TestModeProps> = ({ roomId, userName }) => {
   }, [userName, userColor]);
 
   useEffect(() => {
+    console.log('🔵 TestMode: Initializing Socket.IO connection...');
+    
     const newSocket = io({
       path: '/api/socket',
       transports: ['websocket', 'polling']
     });
 
     newSocket.on('connect', () => {
+      console.log('✅ TestMode: Socket connected:', newSocket.id);
       setIsConnected(true);
       addEvent(`✅ Connected: ${newSocket.id?.slice(0, 8)}`);
       
       // Auto-join room
+      console.log('🚪 TestMode: Joining room:', roomId);
       newSocket.emit('join-room', { room: roomId, name: userName });
       addEvent(`🚪 Joining room ${roomId}`);
     });
 
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ TestMode: Connection error:', error);
+      addEvent(`❌ Connection error: ${error.message}`);
+    });
+
     newSocket.on('disconnect', () => {
+      console.log('❌ TestMode: Socket disconnected');
       setIsConnected(false);
       addEvent('❌ Disconnected');
     });

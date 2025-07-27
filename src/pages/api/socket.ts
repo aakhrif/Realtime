@@ -12,9 +12,11 @@ const users = new Map<string, UserInfo>();
 const rooms = new Map<string, Set<string>>();
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
+  console.log(`🔵 Socket.IO API called: ${req.method} ${req.url}`);
+  
   // @ts-expect-error - NextJS Pages API socket server access
   if (!res.socket.server.io) {
-    console.log('Initializing Socket.IO server...');
+    console.log('🔧 Initializing Socket.IO server...');
     
     // @ts-expect-error - NextJS Pages API socket server access  
     const io = new ServerIO(res.socket.server, {
@@ -26,11 +28,11 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
     });
 
     io.on('connection', (socket) => {
-      console.log(`User connected: ${socket.id}`);
+      console.log(`✅ User connected: ${socket.id}`);
 
       // User joins a room
       socket.on('join-room', async ({ room, name }: { room: string; name: string }) => {
-        console.log(`${name} (${socket.id}) joining room: ${room}`);
+        console.log(`🚪 ${name} (${socket.id}) joining room: ${room}`);
         
         // Leave previous room if any
         const user = users.get(socket.id);
