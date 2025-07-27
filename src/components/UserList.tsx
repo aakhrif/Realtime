@@ -1,5 +1,6 @@
-'use client';
 
+'use client';
+import React, { useState } from 'react';
 import { UserInfo } from '@/hooks/useSocket';
 
 interface UserListProps {
@@ -13,8 +14,12 @@ export const UserList: React.FC<UserListProps> = ({
   currentUserId, 
   currentUserName 
 }) => {
+
+  // Local state for current user's media
+  const [myMedia, setMyMedia] = useState<{ video: boolean; audio: boolean }>({ video: true, audio: true });
+
   const allUsers = [
-    { id: currentUserId, name: currentUserName, room: '' }, // Current user
+    { id: currentUserId, name: currentUserName, room: '', mediaState: myMedia }, // Current user
     ...users.filter(user => user.id !== currentUserId) // Other users
   ];
 
@@ -45,8 +50,11 @@ export const UserList: React.FC<UserListProps> = ({
 
             {/* User Info */}
             <div className="flex-1 min-w-0">
-              <div className="text-white text-sm font-medium truncate">
-                {user.name}
+              <div className="text-white text-sm font-medium truncate flex items-center space-x-2">
+                <span>{user.name}</span>
+                {/* Badges Platzhalter */}
+                <span title="Star" className="text-yellow-400 text-lg">⭐</span>
+                <span title="Rockstar" className="text-pink-400 text-lg">🎸</span>
                 {user.id === currentUserId && (
                   <span className="text-blue-400 text-xs ml-1">(You)</span>
                 )}
@@ -58,32 +66,7 @@ export const UserList: React.FC<UserListProps> = ({
               </div>
             </div>
 
-            {/* Media Status Icons */}
-            <div className="flex space-x-1">
-              {/* Video Icon as Action Button */}
-              <button
-                className="w-5 h-5 text-gray-400 hover:text-blue-500 focus:outline-none cursor-pointer"
-                title={user.id === currentUserId ? 'Toggle Camera' : 'Camera status'}
-                onClick={user.id === currentUserId ? () => {/* TODO: Implement camera toggle */} : undefined}
-                disabled={user.id !== currentUserId}
-              >
-                <svg fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                </svg>
-              </button>
-
-              {/* Audio Icon as Action Button */}
-              <button
-                className="w-5 h-5 text-gray-400 hover:text-blue-500 focus:outline-none cursor-pointer"
-                title={user.id === currentUserId ? 'Toggle Microphone' : 'Microphone status'}
-                onClick={user.id === currentUserId ? () => {/* TODO: Implement mic toggle */} : undefined}
-                disabled={user.id !== currentUserId}
-              >
-                <svg fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            {/* ...keine Media-Status-Icons mehr... */}
           </div>
         ))}
       </div>

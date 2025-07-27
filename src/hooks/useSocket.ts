@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 export interface UserInfo {
-  id: string;
-  name: string;
-  room: string;
+id: string;
+name: string;
+room: string;
+mediaState?: {
+  video: boolean;
+  audio: boolean;
+};
 }
 
 export interface ChatMessage {

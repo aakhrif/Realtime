@@ -112,10 +112,12 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   }, [socket]);
 
   useEffect(() => {
-    if (localStream) {
+    if (mediaEnabled) {
+      setIsLoading(!localStream);
+    } else {
       setIsLoading(false);
     }
-  }, [localStream]);
+  }, [localStream, mediaEnabled]);
 
   const handleScreenShare = async () => {
     try {
@@ -140,7 +142,6 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           <h1 className="text-white text-lg font-semibold">Room: {roomId}</h1>
           <div className="text-gray-400 text-sm">Welcome, {userName}!</div>
         </div>
-        
         <div className="flex items-center space-x-2">
           {error && (
             <div className="text-red-400 text-sm mr-4">
@@ -158,15 +159,21 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Side: Video Grid */}
-        <div className="flex-1 flex flex-col">
+      {/* Left Side: Video Grid */}
+      <div className="flex-1 flex flex-col">
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+          </div>
+        ) : (
           <VideoGrid
             localStream={localStream}
             peers={peers}
             userName={userName}
-            isLoading={isLoading}
+            isLoading={false}
           />
-        </div>
+        )}
+      </div>
 
         {/* Right Side: User List & Chat */}
         <div className="w-80 flex flex-col border-l border-gray-700">

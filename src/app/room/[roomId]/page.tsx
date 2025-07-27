@@ -1,9 +1,11 @@
+
+// ...original code restored...
 'use client';
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { VideoRoom } from '@/components/VideoRoom';
 import { MediaPermission } from '@/components/MediaPermission';
+import { VideoRoomV2 } from '@/components/VideoRoomV2';
 
 type RoomState = 'loading' | 'permission-request' | 'video-room' | 'error';
 
@@ -145,12 +147,11 @@ export default function RoomPage() {
   // Video Room State
   if (roomState === 'video-room') {
     return (
-      <VideoRoom
+      <VideoRoomV2
         roomId={roomId}
-        userName={userName!} // We've validated this is not null
+        userName={userName!}
         onLeaveRoom={handleLeaveRoom}
-        initialStream={mediaStream}
-        mediaEnabled={!!mediaStream} // If we have a stream, media is enabled
+        mediaEnabled={!!mediaStream}
       />
     );
   }
