@@ -17,7 +17,7 @@ const debugHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         roomCount: io ? io.sockets.adapter.rooms.size : 0,
         socketCount: io ? io.sockets.sockets.size : 0
       },
-      rooms: io ? Array.from(io.sockets.adapter.rooms.entries()).map(([roomId, sockets]) => ({
+      rooms: io ? Array.from(io.sockets.adapter.rooms.entries() as Iterable<[string, Set<string>]>).map(([roomId, sockets]) => ({
         roomId,
         userCount: sockets.size,
         socketIds: Array.from(sockets).slice(0, 3) // First 3 socket IDs

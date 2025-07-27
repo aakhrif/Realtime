@@ -91,8 +91,8 @@ export default function MobileTestPage() {
         addLog(`📹 Video Track ${index}: ${settings.width}x${settings.height}@${settings.frameRate}fps`);
       });
       
-    } catch (err: any) {
-      const errorMsg = `❌ Mobile optimized failed: ${err.name} - ${err.message}`;
+    } catch (err: unknown) {
+      const errorMsg = `❌ Mobile optimized failed: ${err instanceof Error ? err.name : 'Unknown'} - ${err instanceof Error ? err.message : 'Unknown error'}`;
       addLog(errorMsg);
       setError(errorMsg);
     }
@@ -129,8 +129,8 @@ export default function MobileTestPage() {
         setStream(testStream);
         addLog(`✅ Success at level ${i + 1}!`);
         return;
-      } catch (err: any) {
-        addLog(`❌ Level ${i + 1} failed: ${err.name}`);
+      } catch (err: unknown) {
+        addLog(`❌ Level ${i + 1} failed: ${err instanceof Error ? err.name : 'Unknown error'}`);
       }
     }
     
@@ -157,8 +157,8 @@ export default function MobileTestPage() {
       videoDevices.forEach((device, index) => {
         addLog(`📹 Camera ${index}: ${device.label || 'Unknown'}`);
       });
-    } catch (err: any) {
-      addLog(`❌ Device enumeration failed: ${err.message}`);
+    } catch (err: unknown) {
+      addLog(`❌ Device enumeration failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
