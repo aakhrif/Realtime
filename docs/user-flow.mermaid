@@ -1,0 +1,19 @@
+flowchart TD
+    START[User öffnet App] --> FORM[Join Form<br/>Name + Room ID eingeben]
+    FORM --> ROUTE[Navigation zu /room/ROOMID?name=USERNAME]
+    ROUTE --> VALIDATE{Parameter<br/>validieren}
+    VALIDATE -->|❌ Invalid| ERROR[Error Page<br/>Zurück zur Startseite]
+    VALIDATE -->|✅ Valid| PERMISSION[Media Permission Request]
+    
+    PERMISSION --> MEDIA_CHECK{Kamera/Mikro<br/>Berechtigung?}
+    MEDIA_CHECK -->|❌ Verweigert| PERMISSION_ERROR[Permission Error<br/>Retry oder Home]
+    MEDIA_CHECK -->|✅ Gewährt| VIDEO_ROOM[VideoRoom Component]
+    
+    VIDEO_ROOM --> SOCKET[Socket Connection<br/>via SocketManager]
+    SOCKET --> JOIN_ROOM[join-room Event<br/>an Server]
+    JOIN_ROOM --> WEBRTC[WebRTC Peer<br/>Connections erstellen]
+    WEBRTC --> ACTIVE[🎥 Aktiver Video Call]
+    
+    ACTIVE --> LEAVE[Leave Room Button]
+    LEAVE --> CLEANUP[Media Stream Cleanup]
+    CLEANUP --> START
