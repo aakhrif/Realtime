@@ -28,7 +28,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
     
     const socketUrl = process.env.NODE_ENV === 'production' 
-      ? `${window.location.protocol}//${window.location.hostname}:3001`
+      ? `${window.location.protocol}//${window.location.hostname}` // Keine Port-Angabe für Production
       : 'http://localhost:3001';
       
     const newSocket = io(socketUrl, {
