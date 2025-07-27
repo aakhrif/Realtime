@@ -19,6 +19,16 @@ app.prepare().then(() => {
     cors: {
       origin: "*",
       methods: ["GET", "POST"]
+    },
+    transports: ['polling'], // Force polling only
+    allowEIO3: false,        // Disable Engine.IO v3 compatibility
+    pingTimeout: 20000,      // Longer ping timeout
+    pingInterval: 10000,     // Longer ping interval
+    maxHttpBufferSize: 1e6,  // Limit buffer size
+    allowRequest: (req, callback) => {
+      // Log each connection attempt
+      console.log('🔍 New connection attempt from:', req.socket.remoteAddress);
+      callback(null, true);
     }
   });
 
@@ -27,7 +37,7 @@ app.prepare().then(() => {
 
   io.on('connection', (socket) => {
     console.log(`✅ User connected: ${socket.id}`);
-    console.log(`📊 Total connected users: ${io.engine.clientsCount}`);
+    console.log(`📊 Total connected users: ${io.sockets.sockets.size}`); // Use logical socket count
     console.log(`📊 Current rooms:`, Array.from(rooms.keys()));
 
     // User joins a room
@@ -100,7 +110,7 @@ app.prepare().then(() => {
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`❌ User disconnected: ${socket.id}`);
-      console.log(`📊 Total connected users after disconnect: ${io.engine.clientsCount}`);
+      console.log(`📊 Total connected users after disconnect: ${io.sockets.sockets.size}`);
       
       const user = users.get(socket.id);
       if (user && user.room) {

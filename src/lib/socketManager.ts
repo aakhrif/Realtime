@@ -8,18 +8,29 @@ class SocketManager {
   private static connectionPromise: Promise<Socket> | null = null;
 
   static getSocket(): Promise<Socket> {
+    console.log('🔍 SocketManager.getSocket() called! Current state:', {
+      hasInstance: !!this.instance,
+      isConnected: this.instance?.connected,
+      isConnecting: this.isConnecting,
+      hasPromise: !!this.connectionPromise
+    });
+
     // If we already have a connected socket, return it
     if (this.instance && this.instance.connected) {
+      console.log('✅ Returning existing connected socket:', this.instance.id);
       return Promise.resolve(this.instance);
     }
 
     // If we're already connecting, return the existing promise
     if (this.isConnecting && this.connectionPromise) {
+      console.log('⏳ Already connecting, returning existing promise');
       return this.connectionPromise;
     }
 
-    // Create new connection
+    // Create new connection - SET FLAGS IMMEDIATELY to prevent race conditions
+    console.log('🆕 Creating NEW socket connection...');
     this.isConnecting = true;
+    
     this.connectionPromise = new Promise((resolve, reject) => {
       console.log('🔌 SocketManager: Creating new socket connection...');
       
