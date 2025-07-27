@@ -28,10 +28,11 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
     
     const newSocket = io({
-      path: '/api/socket', // Zurück zum Next.js API Route Pfad
-      transports: ['polling', 'websocket'],
+      path: '/api/socket',
+      transports: ['polling'], // Nur Polling - kein WebSocket
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      upgrade: false // WebSocket-Upgrade deaktivieren
     });
 
     newSocket.on('connect', () => {
