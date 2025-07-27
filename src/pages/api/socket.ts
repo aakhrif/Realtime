@@ -58,16 +58,6 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
         // Redis: User registrieren für Production
         await RoomManager.addUserToRoom(room, socket.id, socket.id).catch(console.error);
         await ConnectionStats.incrementConnection(room).catch(console.error);
-        
-        // Get room users for broadcasting
-        const roomUsers = Array.from(rooms.get(room) || [])
-          .map(socketId => users.get(socketId))
-          .filter(Boolean) as UserInfo[];
-        
-        if (!rooms.has(room)) {
-          rooms.set(room, new Set());
-        }
-        rooms.get(room)!.add(socket.id);
 
         // Notify others in the room
         socket.to(room).emit('user-joined', {
@@ -79,10 +69,9 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
         // Send current room users to the new user
         const roomUsers = Array.from(rooms.get(room) || [])
           .map(id => users.get(id))
-          .filter(Boolean);
+          .filter(Boolean) as UserInfo[];
         
         socket.emit('room-users', roomUsers);
-        
         console.log(`Users in room ${room}:`, roomUsers.length);
       });
 
