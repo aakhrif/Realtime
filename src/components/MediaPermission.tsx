@@ -86,11 +86,52 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
 
       const constraints = deviceInfo?.isMobile ? mobileConstraints : desktopConstraints;
       
-      console.log(`Requesting media permissions for ${deviceInfo?.browser}...`, constraints);
+      console.log(`🎥 Requesting media permissions for ${deviceInfo?.browser}...`, constraints);
       
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Try progressive fallback for mobile
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('✅ Primary constraints succeeded');
+      } catch (primaryError) {
+        console.warn('⚠️ Primary constraints failed, trying fallback...', primaryError);
+        
+        if (deviceInfo?.isMobile) {
+          // Mobile fallback: Lower quality
+          const mobileFallback = {
+            video: {
+              width: { ideal: 320, max: 640 },
+              height: { ideal: 240, max: 480 },
+              frameRate: { ideal: 10, max: 15 }
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          };
+          
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(mobileFallback);
+            console.log('✅ Mobile fallback succeeded');
+          } catch (fallbackError) {
+            console.warn('⚠️ Mobile fallback failed, trying minimal...', fallbackError);
+            // Minimal fallback
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            console.log('✅ Minimal constraints succeeded');
+          }
+        } else {
+          // Desktop fallback
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          console.log('✅ Desktop fallback succeeded');
+        }
+      }
 
-      console.log('Media permissions granted successfully');
+      // Validate stream
+      if (!stream || !stream.active) {
+        throw new Error('Media stream is not available or active');
+      }
+
+      console.log('✅ Media permissions granted successfully');
       onPermissionGranted(stream);
       
     } catch (err: unknown) {
