@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import SimplePeer from 'simple-peer';
-import { useSocket, UserInfo } from './useSocket';
+import { io, Socket } from 'socket.io-client';
 
 export interface PeerConnection {
   id: string;
@@ -10,7 +10,7 @@ export interface PeerConnection {
 }
 
 export const useWebRTC = (roomId: string, userName: string, initialStream?: MediaStream | null) => {
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(initialStream || null);
   const [peers, setPeers] = useState<Map<string, PeerConnection>>(new Map());
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -18,8 +18,37 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
   const [error, setError] = useState<string | null>(null);
 
   const peersRef = useRef<Map<string, PeerConnection>>(new Map());
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const socketRef = useRef(useSocket());
+  const localStreamRef = useRef<MediaStream | null>(initialStream || null);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize socket connection
+  useEffect(() => {
+    console.log('🔌 Initializing Socket.IO connection...');
+    
+    socketRef.current = io({
+      path: '/api/socket',
+      transports: ['websocket', 'polling']
+    });
+
+    const socket = socketRef.current;
+
+    socket.on('connect', () => {
+      console.log('✅ Socket connected:', socket.id);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ Socket disconnected');
+    });
+
+    socket.on('error', (err) => {
+      console.error('❌ Socket error:', err);
+    });
+
+    return () => {
+      console.log('🔌 Cleaning up socket connection');
+      socket.disconnect();
+    };
+  }, []);
 
   // Get user media
   const getUserMedia = useCallback(async (video = true, audio = true) => {
@@ -85,58 +114,76 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
 
   // Create peer connection
   const createPeer = useCallback((userId: string, userName: string, initiator: boolean): SimplePeer.Instance => {
+    console.log(`🔗 Creating ${initiator ? 'initiating' : 'receiving'} peer connection for ${userName} (${userId})`);
+    
     const peer = new SimplePeer({
       initiator,
       trickle: false,
-      stream: localStreamRef.current || undefined
+      stream: localStreamRef.current || undefined,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
     });
 
+    const socket = socketRef.current;
+    if (!socket) {
+      console.error('❌ Socket not available for peer connection');
+      return peer;
+    }
+
     peer.on('signal', (signal: SimplePeer.SignalData) => {
+      console.log(`📤 Sending ${signal.type} signal to ${userName} (${userId})`);
+      
       if (signal.type === 'offer') {
-        socketRef.current.sendOffer(userId, signal as RTCSessionDescriptionInit);
+        socket.emit('offer', { to: userId, offer: signal });
       } else if (signal.type === 'answer') {
-        socketRef.current.sendAnswer(userId, signal as RTCSessionDescriptionInit);
+        socket.emit('answer', { to: userId, answer: signal });
+      } else if ('candidate' in signal) {
+        socket.emit('ice-candidate', { to: userId, candidate: signal });
       }
     });
 
     peer.on('stream', (remoteStream: MediaStream) => {
-      setPeers(prev => {
-        const newPeers = new Map(prev);
-        const existingPeer = newPeers.get(userId);
-        if (existingPeer) {
-          existingPeer.stream = remoteStream;
-          newPeers.set(userId, existingPeer);
-        }
-        return newPeers;
-      });
+      console.log(`📺 Received stream from ${userName} (${userId})`);
+      
+      const peerConnection: PeerConnection = {
+        id: userId,
+        name: userName,
+        peer,
+        stream: remoteStream
+      };
+      
+      peersRef.current.set(userId, peerConnection);
+      setPeers(new Map(peersRef.current));
     });
 
     peer.on('connect', () => {
-      console.log(`Connected to peer: ${userId}`);
+      console.log(`✅ Peer connection established with ${userName} (${userId})`);
     });
 
     peer.on('error', (err: Error) => {
-      console.error(`Peer connection error with ${userId}:`, err);
-      setError(`Connection error with ${userName}`);
+      console.error(`❌ Peer connection error with ${userName}:`, err);
+      setError(`Connection failed with user ${userName}: ${err.message}`);
     });
 
     peer.on('close', () => {
-      console.log(`Peer connection closed: ${userId}`);
-      setPeers(prev => {
-        const newPeers = new Map(prev);
-        newPeers.delete(userId);
-        return newPeers;
-      });
+      console.log(`🔌 Peer connection closed with ${userName} (${userId})`);
       peersRef.current.delete(userId);
+      setPeers(new Map(peersRef.current));
     });
 
-    const peerConnection: PeerConnection = {
+    // Store peer connection temporarily (will be updated when stream is received)
+    const tempPeerConnection: PeerConnection = {
       id: userId,
       name: userName,
-      peer
+      peer,
+      stream: undefined
     };
-
-    peersRef.current.set(userId, peerConnection);
+    
+    peersRef.current.set(userId, tempPeerConnection);
     setPeers(new Map(peersRef.current));
 
     return peer;
@@ -164,13 +211,15 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
     }
   }, []);
 
-  // Initialize WebRTC
+  // Initialize WebRTC when room and user are ready
   useEffect(() => {
-    if (!roomId || !userName) return;
+    const socket = socketRef.current;
+    if (!socket || !roomId || !userName) return;
+
+    console.log(`🚪 Setting up WebRTC for room: ${roomId}, user: ${userName}`);
 
     let mounted = true;
-    const currentPeers = peersRef.current;
-    const socket = socketRef.current;
+    const currentPeers = peersRef.current; // Capture peers ref at effect start
 
     const initializeWebRTC = async () => {
       if (!mounted) return;
@@ -187,37 +236,47 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
           stream = await getUserMedia();
         }
         
-        if (mounted) {
-          socket.joinRoom(roomId, userName);
+        if (mounted && socket.connected) {
+          console.log(`🚪 Joining room ${roomId} as ${userName}`);
+          socket.emit('join-room', { room: roomId, name: userName });
         }
       } catch (err) {
         console.error('Failed to initialize WebRTC:', err);
+        setError('Failed to initialize video/audio. Please check permissions.');
       }
     };
 
-    // Socket event listeners
-    const handleUserJoined = (user: UserInfo) => {
+    // Socket event handlers for WebRTC signaling
+    const handleUserJoined = ({ id, name }: { id: string; name: string }) => {
       if (!mounted) return;
-      console.log('User joined:', user);
-      createPeer(user.id, user.name, true);
+      console.log(`👥 User ${name} (${id}) joined room`);
+      
+      // Create peer connection as initiator for the new user
+      if (id !== socket.id && !peersRef.current.has(id)) {
+        console.log(`🤝 Creating initiating peer connection to ${name}`);
+        createPeer(id, name, true);
+      }
     };
 
-    const handleUserLeft = (user: UserInfo) => {
+    const handleUserLeft = ({ id, name }: { id: string; name?: string }) => {
       if (!mounted) return;
-      console.log('User left:', user);
-      const peerConnection = currentPeers.get(user.id);
+      console.log(`👋 User ${name || id} left room`);
+      
+      const peerConnection = peersRef.current.get(id);
       if (peerConnection) {
         peerConnection.peer.destroy();
-        currentPeers.delete(user.id);
-        setPeers(new Map(currentPeers));
+        peersRef.current.delete(id);
+        setPeers(new Map(peersRef.current));
       }
     };
 
-    const handleRoomUsers = (users: UserInfo[]) => {
+    const handleRoomUsers = (users: { id: string; name: string }[]) => {
       if (!mounted) return;
-      console.log('Room users:', users);
+      console.log(`📋 Current room users:`, users);
+      
       users.forEach((user) => {
-        if (user.id !== socket.socket?.id) {
+        if (user.id !== socket.id && !peersRef.current.has(user.id)) {
+          console.log(`🤝 Creating receiving peer connection to ${user.name}`);
           createPeer(user.id, user.name, false);
         }
       });
@@ -225,40 +284,69 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
 
     const handleOffer = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
       if (!mounted) return;
-      const peerConnection = currentPeers.get(from);
+      console.log(`📡 Received offer from ${from}`);
+      
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(offer);
+      } else {
+        console.log(`🆕 Creating new peer for incoming offer from ${from}`);
+        const newPeer = createPeer(from, from, false);
+        newPeer.signal(offer);
       }
     };
 
     const handleAnswer = ({ from, answer }: { from: string; answer: RTCSessionDescriptionInit }) => {
       if (!mounted) return;
-      const peerConnection = currentPeers.get(from);
+      console.log(`📡 Received answer from ${from}`);
+      
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(answer);
       }
     };
 
-    const handleIceCandidate = ({ from, candidate }: { from: string; candidate: RTCIceCandidate }) => {
+    const handleIceCandidate = ({ from, candidate }: { from: string; candidate: SimplePeer.SignalData }) => {
       if (!mounted) return;
-      const peerConnection = currentPeers.get(from);
+      console.log(`🧊 Received ICE candidate from ${from}`);
+      
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
-        peerConnection.peer.signal({ type: 'candidate', candidate });
+        peerConnection.peer.signal(candidate);
       }
     };
 
-    // Set up event listeners
-    socket.onUserJoined(handleUserJoined);
-    socket.onUserLeft(handleUserLeft);
-    socket.onRoomUsers(handleRoomUsers);
-    socket.onOffer(handleOffer);
-    socket.onAnswer(handleAnswer);
-    socket.onIceCandidate(handleIceCandidate);
+    // Register socket event listeners
+    socket.on('user-joined', handleUserJoined);
+    socket.on('user-left', handleUserLeft);
+    socket.on('room-users', handleRoomUsers);
+    socket.on('offer', handleOffer);
+    socket.on('answer', handleAnswer);
+    socket.on('ice-candidate', handleIceCandidate);
 
-    initializeWebRTC();
+    // Initialize when socket connects
+    if (socket.connected) {
+      initializeWebRTC();
+    } else {
+      socket.on('connect', initializeWebRTC);
+    }
 
     return () => {
       mounted = false;
+      
+      console.log('🧹 Cleaning up WebRTC connections');
+      
+      // Capture current peers reference for cleanup
+      const currentPeers = peersRef.current;
+      
+      // Cleanup event listeners
+      socket.off('user-joined', handleUserJoined);
+      socket.off('user-left', handleUserLeft);
+      socket.off('room-users', handleRoomUsers);
+      socket.off('offer', handleOffer);
+      socket.off('answer', handleAnswer);
+      socket.off('ice-candidate', handleIceCandidate);
+      socket.off('connect', initializeWebRTC);
       
       // Cleanup peers
       currentPeers.forEach((peerConnection) => {
@@ -267,12 +355,10 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       currentPeers.clear();
       setPeers(new Map());
 
-      // Cleanup media stream if not initial stream
+      // Don't cleanup initial stream as it's provided externally
       if (localStreamRef.current && localStreamRef.current !== initialStream) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
       }
-
-      socket.removeAllListeners();
     };
   }, [roomId, userName, initialStream, getUserMedia, createPeer]);
 
