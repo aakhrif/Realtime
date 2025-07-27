@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import SimplePeer from 'simple-peer';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 
 export interface PeerConnection {
   id: string;
@@ -9,7 +9,7 @@ export interface PeerConnection {
   stream?: MediaStream;
 }
 
-export const useWebRTC = (roomId: string, userName: string, initialStream?: MediaStream | null) => {
+export const useWebRTC = (roomId: string, userName: string, socket: Socket | null, initialStream?: MediaStream | null) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(initialStream || null);
   const [peers, setPeers] = useState<Map<string, PeerConnection>>(new Map());
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -19,36 +19,12 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
 
   const peersRef = useRef<Map<string, PeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(initialStream || null);
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(socket);
 
-  // Initialize socket connection
+  // Update socket reference when socket changes
   useEffect(() => {
-    console.log('🔌 Initializing Socket.IO connection...');
-    
-    socketRef.current = io({
-      path: '/api/socket',
-      transports: ['websocket', 'polling']
-    });
-
-    const socket = socketRef.current;
-
-    socket.on('connect', () => {
-      console.log('✅ Socket connected:', socket.id);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('❌ Socket disconnected');
-    });
-
-    socket.on('error', (err) => {
-      console.error('❌ Socket error:', err);
-    });
-
-    return () => {
-      console.log('🔌 Cleaning up socket connection');
-      socket.disconnect();
-    };
-  }, []);
+    socketRef.current = socket;
+  }, [socket]);
 
   // Get user media
   const getUserMedia = useCallback(async (video = true, audio = true) => {

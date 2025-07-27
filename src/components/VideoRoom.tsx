@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { VideoControls } from '@/components/VideoControls';
@@ -19,6 +20,37 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   onLeaveRoom,
   initialStream = null
 }) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize socket connection
+  useEffect(() => {
+    console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
+    
+    const newSocket = io({
+      path: '/api/socket',
+      transports: ['websocket', 'polling']
+    });
+
+    newSocket.on('connect', () => {
+      console.log('✅ VideoRoom: Socket connected:', newSocket.id);
+      setSocket(newSocket);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('❌ VideoRoom: Socket disconnected');
+    });
+
+    newSocket.on('error', (err) => {
+      console.error('❌ VideoRoom: Socket error:', err);
+    });
+
+    return () => {
+      console.log('🔌 VideoRoom: Cleaning up socket connection');
+      newSocket.disconnect();
+    };
+  }, []);
+
   const {
     localStream,
     peers,
@@ -30,9 +62,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     toggleAudio,
     getScreenShare,
     stopScreenShare
-  } = useWebRTC(roomId, userName, initialStream);
-
-  const [isLoading, setIsLoading] = useState(true);
+  } = useWebRTC(roomId, userName, socket, initialStream);
 
   useEffect(() => {
     if (localStream) {
