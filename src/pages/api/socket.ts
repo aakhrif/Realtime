@@ -20,7 +20,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
     
     // @ts-expect-error - NextJS Pages API socket server access  
     const io = new ServerIO(res.socket.server, {
-      path: '/api/socket',
+      path: '/socket.io', // Standard Socket.IO Pfad statt /api/socket
       cors: {
         origin: "*",
         methods: ["GET", "POST"]

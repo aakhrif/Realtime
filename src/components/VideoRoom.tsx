@@ -27,12 +27,8 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   useEffect(() => {
     console.log('🔌 VideoRoom: Initializing Socket.IO connection...');
     
-    const socketUrl = process.env.NODE_ENV === 'production' 
-      ? `${window.location.protocol}//${window.location.hostname}` // Keine Port-Angabe für Production
-      : 'http://localhost:3001';
-      
-    const newSocket = io(socketUrl, {
-      path: '/socket.io/', // Standard Socket.IO Pfad
+    const newSocket = io({
+      path: '/socket.io/', // Standard Socket.IO Pfad - wird von Nginx zu /api/socket gemapped
       transports: ['polling', 'websocket'],
       timeout: 20000,
       forceNew: true
