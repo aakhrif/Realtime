@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react';
 
 export default function MobileTestPage() {
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
-  const [mediaSupport, setMediaSupport] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<{
+    userAgent: string;
+    isMobile: boolean;
+    isSecure: boolean;
+    browserInfo: Record<string, boolean>;
+  } | null>(null);
+  const [mediaSupport, setMediaSupport] = useState<{
+    getUserMedia: boolean;
+    enumerateDevices: boolean;
+    webRTC: boolean;
+  } | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -35,7 +44,7 @@ export default function MobileTestPage() {
     const support = {
       getUserMedia: !!navigator.mediaDevices?.getUserMedia,
       enumerateDevices: !!navigator.mediaDevices?.enumerateDevices,
-      webRTC: !!(window as any).RTCPeerConnection
+      webRTC: !!(window as unknown as { RTCPeerConnection?: unknown }).RTCPeerConnection
     };
     setMediaSupport(support);
     addLog(`🎥 Media support: ${Object.entries(support).filter(([,v]) => v).map(([k]) => k).join(', ')}`);
@@ -47,8 +56,8 @@ export default function MobileTestPage() {
       const testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       addLog(`✅ Basic access: Video=${testStream.getVideoTracks().length}, Audio=${testStream.getAudioTracks().length}`);
       testStream.getTracks().forEach(track => track.stop());
-    } catch (err: any) {
-      addLog(`❌ Basic access failed: ${err.name} - ${err.message}`);
+    } catch (err: unknown) {
+      addLog(`❌ Basic access failed: ${err instanceof Error ? err.name : 'Unknown'} - ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

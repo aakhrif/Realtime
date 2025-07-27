@@ -34,49 +34,83 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
       socket.on('join-room', async ({ room, name }: { room: string; name: string }) => {
         console.log(`🚪 ${name} (${socket.id}) joining room: ${room}`);
         
-        // Leave previous room if any
-        const user = users.get(socket.id);
-        if (user && user.room) {
-          socket.leave(user.room);
-          const roomUsers = rooms.get(user.room);
-          if (roomUsers) {
-            roomUsers.delete(socket.id);
+        try {
+          // Leave previous room if any
+          const user = users.get(socket.id);
+          if (user && user.room) {
+            socket.leave(user.room);
+            const roomUsers = rooms.get(user.room);
+            if (roomUsers) {
+              roomUsers.delete(socket.id);
+              // Notify others in previous room
+              socket.to(user.room).emit('user-left', {
+                id: socket.id,
+                name: user.name
+              });
+            }
             // Redis cleanup for production
             await RoomManager.removeUserFromRoom(user.room, socket.id).catch(console.error);
           }
+
+          // Join new room
+          await socket.join(room);
+          const userInfo: UserInfo = { id: socket.id, name, room };
+          users.set(socket.id, userInfo);
+          
+          // Track in local memory (always works)
+          if (!rooms.has(room)) {
+            rooms.set(room, new Set());
+          }
+          rooms.get(room)?.add(socket.id);
+          
+          // Redis: User registrieren für Production (non-blocking)
+          RoomManager.addUserToRoom(room, socket.id, name).catch(err => 
+            console.warn('Redis addUser failed (non-critical):', err.message)
+          );
+          ConnectionStats.incrementConnection(room).catch(err => 
+            console.warn('Redis stats failed (non-critical):', err.message)
+          );
+
+          // Get ALL users in room from Socket.IO rooms (most reliable)
+          const socketioRoom = io.sockets.adapter.rooms.get(room);
+          const allSocketIds = Array.from(socketioRoom || []);
+          
+          console.log(`🔍 Room ${room} analysis:`, {
+            socketioRoom: allSocketIds.length,
+            localMap: rooms.get(room)?.size || 0,
+            allSockets: allSocketIds
+          });
+
+          // Build current users list from Socket.IO room data
+          const currentUsers: { id: string; name: string }[] = [];
+          for (const socketId of allSocketIds) {
+            if (socketId !== socket.id) {
+              const userInfo = users.get(socketId);
+              if (userInfo) {
+                currentUsers.push({ id: userInfo.id, name: userInfo.name });
+              } else {
+                // Fallback: Use socketId as name if user info missing
+                currentUsers.push({ id: socketId, name: `User-${socketId.slice(0, 6)}` });
+              }
+            }
+          }
+
+          // Send current room users to the new user
+          socket.emit('room-users', currentUsers);
+
+          // Notify ALL others in the room about the new user (including this socket)
+          io.to(room).emit('user-joined', {
+            id: socket.id,
+            name
+          });
+          
+          console.log(`✅ User ${name} joined room ${room}. Total: ${allSocketIds.length}, Existing: ${currentUsers.length}`);
+          console.log(`📋 Sending ${currentUsers.length} existing users:`, currentUsers);
+
+        } catch (error) {
+          console.error('❌ Error in join-room:', error);
+          socket.emit('error', { message: 'Failed to join room' });
         }
-
-        // Join new room
-        socket.join(room);
-        const userInfo: UserInfo = { id: socket.id, name, room };
-        users.set(socket.id, userInfo);
-        
-        // Track in local memory (development) and Redis (production)
-        if (!rooms.has(room)) {
-          rooms.set(room, new Set());
-        }
-        rooms.get(room)?.add(socket.id);
-        
-        // Redis: User registrieren für Production
-        await RoomManager.addUserToRoom(room, socket.id, socket.id).catch(console.error);
-        await ConnectionStats.incrementConnection(room).catch(console.error);
-
-        // Notify others in the room about the new user
-        socket.to(room).emit('user-joined', {
-          id: socket.id,
-          name
-        });
-
-        // Send current room users to the new user (excluding themselves)
-        const currentUsers = Array.from(rooms.get(room) || [])
-          .map(socketId => users.get(socketId))
-          .filter(user => user && user.id !== socket.id)
-          .map(user => ({ id: user!.id, name: user!.name }));
-        
-        socket.emit('room-users', currentUsers);
-        
-        console.log(`✅ User ${name} joined room ${room}. Total users in room: ${rooms.get(room)?.size || 0}`);
-        console.log(`📋 Sending ${currentUsers.length} existing users to new user:`, currentUsers);
       });
 
       // WebRTC Signaling
@@ -122,28 +156,41 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
         
         const user = users.get(socket.id);
         if (user) {
-          // Redis cleanup for production
-          await RoomManager.removeUserFromRoom(user.room, socket.id).catch(console.error);
-          
-          // Notify others in the room that user left
-          socket.to(user.room).emit('user-left', {
-            id: socket.id,
-            name: user.name
-          });
+          try {
+            // Redis cleanup for production (non-blocking)
+            RoomManager.removeUserFromRoom(user.room, socket.id).catch(err => 
+              console.warn('Redis removeUser failed (non-critical):', err.message)
+            );
+            
+            // Notify others in the room that user left
+            socket.to(user.room).emit('user-left', {
+              id: socket.id,
+              name: user.name
+            });
 
-          // Clean up local tracking
-          const roomUsers = rooms.get(user.room);
-          if (roomUsers) {
-            roomUsers.delete(socket.id);
-            if (roomUsers.size === 0) {
-              rooms.delete(user.room);
-              console.log(`🗑️ Room ${user.room} deleted (empty)`);
-            } else {
-              console.log(`👋 User ${user.name} left room ${user.room}. Remaining users: ${roomUsers.size}`);
+            // Clean up local tracking
+            const roomUsers = rooms.get(user.room);
+            if (roomUsers) {
+              roomUsers.delete(socket.id);
+              if (roomUsers.size === 0) {
+                rooms.delete(user.room);
+                console.log(`🗑️ Room ${user.room} deleted (empty)`);
+              } else {
+                console.log(`👋 User ${user.name} left room ${user.room}. Remaining users: ${roomUsers.size}`);
+              }
             }
+            
+            // Remove user from global tracking
+            users.delete(socket.id);
+            
+            // Double-check with Socket.IO rooms
+            const socketioRoom = io.sockets.adapter.rooms.get(user.room);
+            const remainingCount = socketioRoom?.size || 0;
+            console.log(`🔍 Room ${user.room} after disconnect: Local=${roomUsers?.size || 0}, SocketIO=${remainingCount}`);
+            
+          } catch (error) {
+            console.error('❌ Error in disconnect handler:', error);
           }
-          
-          users.delete(socket.id);
         }
       });
     });
