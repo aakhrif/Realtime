@@ -78,6 +78,15 @@ app.prepare().then(() => {
         // Notify user they joined successfully
         socket.emit('joined-room', { room, users: Array.from(rooms.get(room) || []) });
         
+        // Send current room users to the joining user
+        const currentRoomUsers = Array.from(roomUsers.entries()).map(([socketId, userData]) => ({
+          id: socketId,
+          name: userData.name
+        }));
+        
+        console.log(`📋 Sending current room users to ${name}:`, currentRoomUsers);
+        socket.emit('room-users', currentRoomUsers);
+        
         // Notify others in room
         socket.to(room).emit('user-joined', userInfo);
         
@@ -91,20 +100,20 @@ app.prepare().then(() => {
       }
     });
 
-    // Handle WebRTC signaling
-    socket.on('webrtc-offer', ({ offer, targetId, room }) => {
-      console.log(`📡 Relaying offer from ${socket.id} to ${targetId} in room ${room}`);
-      socket.to(targetId).emit('webrtc-offer', { offer, senderId: socket.id });
+    // Handle WebRTC signaling - corrected event names to match client
+    socket.on('offer', ({ to, offer }) => {
+      console.log(`📡 Relaying offer from ${socket.id} to ${to}`);
+      socket.to(to).emit('offer', { from: socket.id, offer });
     });
 
-    socket.on('webrtc-answer', ({ answer, targetId, room }) => {
-      console.log(`📡 Relaying answer from ${socket.id} to ${targetId} in room ${room}`);
-      socket.to(targetId).emit('webrtc-answer', { answer, senderId: socket.id });
+    socket.on('answer', ({ to, answer }) => {
+      console.log(`📡 Relaying answer from ${socket.id} to ${to}`);
+      socket.to(to).emit('answer', { from: socket.id, answer });
     });
 
-    socket.on('webrtc-ice-candidate', ({ candidate, targetId, room }) => {
-      console.log(`🧊 Relaying ICE candidate from ${socket.id} to ${targetId} in room ${room}`);
-      socket.to(targetId).emit('webrtc-ice-candidate', { candidate, senderId: socket.id });
+    socket.on('ice-candidate', ({ to, candidate }) => {
+      console.log(`🧊 Relaying ICE candidate from ${socket.id} to ${to}`);
+      socket.to(to).emit('ice-candidate', { from: socket.id, candidate });
     });
 
     // Handle disconnection
