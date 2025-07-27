@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "next lint",
     "docker:build": "docker build -t realtime-video-chat .",
     "docker:run": "docker run -p 3000:3000 realtime-video-chat",
