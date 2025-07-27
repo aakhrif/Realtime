@@ -1,19 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { VideoRoom } from '@/components/VideoRoom';
-import { MediaPermission } from '@/components/MediaPermission';
-
-type AppState = 'join-form' | 'permission-request' | 'video-room';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>('join-form');
-  const [roomId, setRoomId] = useState('');
-  const [userName, setUserName] = useState('');
+  const router = useRouter();
   const [inputRoomId, setInputRoomId] = useState('');
   const [inputUserName, setInputUserName] = useState('');
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,38 +17,13 @@ export default function Home() {
       return;
     }
 
-    setRoomId(inputRoomId.trim());
-    setUserName(inputUserName.trim());
-    setAppState('permission-request');
-  };
-
-  const handlePermissionGranted = (stream: MediaStream) => {
-    setMediaStream(stream);
-    setPermissionError(null);
-    setAppState('video-room');
-  };
-
-  const handlePermissionDenied = (error: string) => {
-    setPermissionError(error);
-    // Bleibe im Permission-Request State, damit User es nochmal versuchen kann
-  };
-
-  const handleLeaveRoom = () => {
-    // Cleanup media stream
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(track => track.stop());
-      setMediaStream(null);
-    }
+    setIsJoining(true);
     
-    setAppState('join-form');
-    setRoomId('');
-    setUserName('');
-    setPermissionError(null);
-  };
-
-  const handleBackToForm = () => {
-    setAppState('join-form');
-    setPermissionError(null);
+    // Navigate to room with parameters
+    const roomId = inputRoomId.trim();
+    const userName = inputUserName.trim();
+    
+    router.push(`/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`);
   };
 
   const generateRoomId = () => {
@@ -62,42 +31,7 @@ export default function Home() {
     setInputRoomId(randomId);
   };
 
-  // Permission Request State
-  if (appState === 'permission-request') {
-    return (
-      <div className="relative">
-        <MediaPermission
-          onPermissionGranted={handlePermissionGranted}
-          onPermissionDenied={handlePermissionDenied}
-        />
-        
-        {/* Back Button */}
-        <button
-          onClick={handleBackToForm}
-          className="absolute top-6 left-6 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition"
-          title="Zurück zum Formular"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      </div>
-    );
-  }
-
-  // Video Room State
-  if (appState === 'video-room') {
-    return (
-      <VideoRoom
-        roomId={roomId}
-        userName={userName}
-        onLeaveRoom={handleLeaveRoom}
-        initialStream={mediaStream}
-      />
-    );
-  }
-
-  // Join Form State (Default)
+  // Join Form State
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
@@ -108,13 +42,6 @@ export default function Home() {
           <p className="text-gray-600">
             Connect with others through real-time video calls
           </p>
-
-          {/* Permission Error Display */}
-          {permissionError && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
-              <p className="text-sm text-red-700">{permissionError}</p>
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleJoinRoom} className="space-y-6">
@@ -133,6 +60,7 @@ export default function Home() {
               placeholder="Enter your name"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               required
+              disabled={isJoining}
             />
           </div>
 
@@ -152,12 +80,14 @@ export default function Home() {
                 placeholder="Enter room ID"
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 required
+                disabled={isJoining}
               />
               <button
                 type="button"
                 onClick={generateRoomId}
-                className="px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition font-medium text-gray-700"
+                className="px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition font-medium text-gray-700 disabled:opacity-50"
                 title="Generate random room ID"
+                disabled={isJoining}
               >
                 🎲
               </button>
@@ -169,9 +99,17 @@ export default function Home() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 transform hover:scale-105"
+            disabled={isJoining}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none"
           >
-            🎥 Continue to Camera Setup
+            {isJoining ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Joining Room...
+              </span>
+            ) : (
+              '🎥 Join Video Room'
+            )}
           </button>
         </form>
 
