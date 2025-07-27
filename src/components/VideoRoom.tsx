@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { VideoControls } from '@/components/VideoControls';
+import { RoomDebugger } from '@/components/RoomDebugger';
 
 interface VideoRoomProps {
   roomId: string;
@@ -137,6 +138,9 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           </div>
         )}
       </div>
+
+      {/* Debug Panel */}
+      <RoomDebugger roomId={roomId} />
     </div>
   );
 };

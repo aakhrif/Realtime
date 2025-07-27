@@ -252,7 +252,7 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       console.log(`👥 User ${name} (${id}) joined room`);
       
       // Create peer connection as initiator for the new user
-      if (id !== socket.id && !peersRef.current.has(id)) {
+      if (id !== socket.id && !currentPeers.has(id)) {
         console.log(`🤝 Creating initiating peer connection to ${name}`);
         createPeer(id, name, true);
       }
@@ -262,11 +262,12 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       if (!mounted) return;
       console.log(`👋 User ${name || id} left room`);
       
-      const peerConnection = peersRef.current.get(id);
+      const peerConnection = currentPeers.get(id);
       if (peerConnection) {
+        console.log(`🔌 Destroying peer connection with ${name || id}`);
         peerConnection.peer.destroy();
-        peersRef.current.delete(id);
-        setPeers(new Map(peersRef.current));
+        currentPeers.delete(id);
+        setPeers(new Map(currentPeers));
       }
     };
 
@@ -275,7 +276,7 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       console.log(`📋 Current room users:`, users);
       
       users.forEach((user) => {
-        if (user.id !== socket.id && !peersRef.current.has(user.id)) {
+        if (user.id !== socket.id && !currentPeers.has(user.id)) {
           console.log(`🤝 Creating receiving peer connection to ${user.name}`);
           createPeer(user.id, user.name, false);
         }
@@ -286,7 +287,7 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       if (!mounted) return;
       console.log(`📡 Received offer from ${from}`);
       
-      const peerConnection = peersRef.current.get(from);
+      const peerConnection = currentPeers.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(offer);
       } else {
@@ -300,7 +301,7 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       if (!mounted) return;
       console.log(`📡 Received answer from ${from}`);
       
-      const peerConnection = peersRef.current.get(from);
+      const peerConnection = currentPeers.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(answer);
       }
@@ -310,7 +311,7 @@ export const useWebRTC = (roomId: string, userName: string, initialStream?: Medi
       if (!mounted) return;
       console.log(`🧊 Received ICE candidate from ${from}`);
       
-      const peerConnection = peersRef.current.get(from);
+      const peerConnection = currentPeers.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(candidate);
       }

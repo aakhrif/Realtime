@@ -59,20 +59,22 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
         await RoomManager.addUserToRoom(room, socket.id, socket.id).catch(console.error);
         await ConnectionStats.incrementConnection(room).catch(console.error);
 
-        // Notify others in the room
+        // Notify others in the room about the new user
         socket.to(room).emit('user-joined', {
           id: socket.id,
-          name,
-          room
+          name
         });
 
-        // Send current room users to the new user
-        const roomUsers = Array.from(rooms.get(room) || [])
-          .map(id => users.get(id))
-          .filter(Boolean) as UserInfo[];
+        // Send current room users to the new user (excluding themselves)
+        const currentUsers = Array.from(rooms.get(room) || [])
+          .map(socketId => users.get(socketId))
+          .filter(user => user && user.id !== socket.id)
+          .map(user => ({ id: user!.id, name: user!.name }));
         
-        socket.emit('room-users', roomUsers);
-        console.log(`Users in room ${room}:`, roomUsers.length);
+        socket.emit('room-users', currentUsers);
+        
+        console.log(`✅ User ${name} joined room ${room}. Total users in room: ${rooms.get(room)?.size || 0}`);
+        console.log(`📋 Sending ${currentUsers.length} existing users to new user:`, currentUsers);
       });
 
       // WebRTC Signaling
@@ -114,28 +116,33 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
 
       // Handle disconnect
       socket.on('disconnect', async () => {
-        console.log(`User disconnected: ${socket.id}`);
+        console.log(`❌ User disconnected: ${socket.id}`);
         
         const user = users.get(socket.id);
         if (user) {
           // Redis cleanup for production
           await RoomManager.removeUserFromRoom(user.room, socket.id).catch(console.error);
           
+          // Notify others in the room that user left
           socket.to(user.room).emit('user-left', {
             id: socket.id,
             name: user.name
           });
 
+          // Clean up local tracking
           const roomUsers = rooms.get(user.room);
           if (roomUsers) {
             roomUsers.delete(socket.id);
             if (roomUsers.size === 0) {
               rooms.delete(user.room);
+              console.log(`🗑️ Room ${user.room} deleted (empty)`);
+            } else {
+              console.log(`👋 User ${user.name} left room ${user.room}. Remaining users: ${roomUsers.size}`);
             }
           }
+          
+          users.delete(socket.id);
         }
-        
-        users.delete(socket.id);
       });
     });
 

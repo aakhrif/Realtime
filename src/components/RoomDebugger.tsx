@@ -1,0 +1,128 @@
+// Debug Component für Multi-User Testing
+'use client';
+
+import { useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+interface DebugUser {
+  id: string;
+  name: string;
+}
+
+export const RoomDebugger = ({ roomId }: { roomId: string }) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [users, setUsers] = useState<DebugUser[]>([]);
+  const [events, setEvents] = useState<string[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const addEvent = (event: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setEvents(prev => [`[${timestamp}] ${event}`, ...prev.slice(0, 19)]);
+  };
+
+  useEffect(() => {
+    const newSocket = io({
+      path: '/api/socket',
+      transports: ['websocket', 'polling']
+    });
+
+    newSocket.on('connect', () => {
+      setIsConnected(true);
+      addEvent(`✅ Connected: ${newSocket.id}`);
+    });
+
+    newSocket.on('disconnect', () => {
+      setIsConnected(false);
+      addEvent('❌ Disconnected');
+    });
+
+    newSocket.on('user-joined', ({ id, name }: { id: string; name: string }) => {
+      addEvent(`👥 User joined: ${name} (${id})`);
+      setUsers(prev => [...prev.filter(u => u.id !== id), { id, name }]);
+    });
+
+    newSocket.on('user-left', ({ id, name }: { id: string; name: string }) => {
+      addEvent(`👋 User left: ${name} (${id})`);
+      setUsers(prev => prev.filter(u => u.id !== id));
+    });
+
+    newSocket.on('room-users', (roomUsers: DebugUser[]) => {
+      addEvent(`📋 Room users received: ${roomUsers.length} users`);
+      setUsers(roomUsers);
+    });
+
+    newSocket.on('offer', ({ from }: { from: string }) => {
+      addEvent(`📡 WebRTC Offer from: ${from}`);
+    });
+
+    newSocket.on('answer', ({ from }: { from: string }) => {
+      addEvent(`📡 WebRTC Answer from: ${from}`);
+    });
+
+    newSocket.on('ice-candidate', ({ from }: { from: string }) => {
+      addEvent(`🧊 ICE Candidate from: ${from}`);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const joinRoom = (userName: string) => {
+    if (socket) {
+      socket.emit('join-room', { room: roomId, name: userName });
+      addEvent(`🚪 Joining room ${roomId} as ${userName}`);
+    }
+  };
+
+  return (
+    <div className="fixed top-4 right-4 w-80 bg-white rounded-lg shadow-lg p-4 text-xs z-50">
+      <h3 className="font-bold mb-2">🐛 Room Debug: {roomId}</h3>
+      
+      <div className="mb-2">
+        <div className={`inline-block w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+        <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+      </div>
+
+      <div className="mb-3">
+        <h4 className="font-semibold">Users in Room ({users.length}):</h4>
+        {users.length === 0 ? (
+          <p className="text-gray-500">No users</p>
+        ) : (
+          <ul className="text-xs">
+            {users.map(user => (
+              <li key={user.id} className="truncate">
+                👤 {user.name} ({user.id.slice(0, 8)}...)
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <button 
+          onClick={() => joinRoom(`User-${Math.floor(Math.random() * 1000)}`)}
+          className="w-full bg-blue-500 text-white px-2 py-1 rounded text-xs"
+          disabled={!isConnected}
+        >
+          Join as Random User
+        </button>
+      </div>
+
+      <div>
+        <h4 className="font-semibold mb-1">Recent Events:</h4>
+        <div className="bg-black text-green-400 p-2 rounded text-xs h-32 overflow-y-auto font-mono">
+          {events.length === 0 ? (
+            <p>No events yet...</p>
+          ) : (
+            events.map((event, index) => (
+              <div key={index}>{event}</div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
