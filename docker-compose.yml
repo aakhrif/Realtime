@@ -21,21 +21,6 @@ services:
     #   retries: 3
     #   start_period: 40s
 
-  # Nginx Reverse Proxy (Optional for SSL/Load Balancing)
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - realtime-app
-    networks:
-      - realtime-network
-    restart: unless-stopped
-
   # Redis for Session Management (Optional)
   redis:
     image: redis:7-alpine
