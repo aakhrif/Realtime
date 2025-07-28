@@ -24,6 +24,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [stream]);
 
+  // Prüfe, ob ein aktives Video-Track vorhanden und enabled ist
+  const isVideoActive = !!stream && stream.getVideoTracks().length > 0 && stream.getVideoTracks()[0].enabled;
+
   return (
     <div className={`relative bg-gray-800 rounded-lg overflow-hidden ${className}`}>
       <video
@@ -32,13 +35,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         playsInline
         muted={muted || isLocal}
         className="w-full h-full object-cover"
+        style={{ display: isVideoActive ? 'block' : 'none' }}
       />
       <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
         {isLocal ? 'You' : userName}
       </div>
-      {!stream && (
+      {!isVideoActive && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-700">
-              <Image src="/camera-off.svg" alt="Camera off" width={64} height={64} className="mb-2 opacity-80" />
+          <Image src="/camera-off.svg" alt="Camera off" width={64} height={64} className="mb-2 opacity-80" />
           <div className="text-white text-center">
             <p className="text-sm font-semibold">{isLocal ? 'You' : userName}</p>
             <p className="text-xs text-gray-400">Kamera aus</p>

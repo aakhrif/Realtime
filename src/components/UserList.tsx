@@ -26,10 +26,30 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, currentUserId, stream
     }
   }, [stream]);
 
+  // Prüfe, ob ein aktives Video-Track vorhanden und enabled ist
+  const isVideoActive = !!stream && stream.getVideoTracks().length > 0 && stream.getVideoTracks()[0].enabled;
+
   return (
     <div className="relative w-full h-40 flex items-center justify-center bg-gray-900 rounded-lg border border-gray-700 shadow">
       {/* Cam-Vorschau für jeden User */}
-      <video ref={videoRef} autoPlay muted className="w-full h-full object-cover rounded-lg bg-black" />
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        className="w-full h-full object-cover rounded-lg bg-black"
+        style={{ display: isVideoActive ? 'block' : 'none' }}
+      />
+      {/* Kamera aus Overlay */}
+      {!isVideoActive && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-700">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/camera-off.svg" alt="Camera off" width={64} height={64} className="mb-2 opacity-80" />
+          <div className="text-white text-center">
+            <p className="text-sm font-semibold">{user.name}</p>
+            <p className="text-xs text-gray-400">Kamera aus</p>
+          </div>
+        </div>
+      )}
       {/* Overlay: User-Info-Leiste am unteren Rand */}
       <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-60 flex items-center px-3 py-2 text-xs space-x-2 rounded-b-lg">
         <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold ${user.id === currentUserId ? "bg-blue-500" : "bg-gray-600"} text-white mr-2`}>
