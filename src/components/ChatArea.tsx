@@ -6,11 +6,12 @@ import { useEffect, useRef } from 'react';
 interface ChatAreaProps {
   messages: ChatMessage[];
   isLoading?: boolean;
+  extraBottomSpace?: boolean;
 }
-
-export const ChatArea: React.FC<ChatAreaProps> = ({ 
-  messages, 
-  isLoading = false 
+export const ChatArea: React.FC<ChatAreaProps> = ({
+  messages,
+  isLoading = false,
+  extraBottomSpace = false
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +60,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="flex-1 bg-gray-900 overflow-y-auto p-4">
+    <div className={`flex-1 bg-gray-900 overflow-y-auto p-4 ${extraBottomSpace ? 'pb-28' : ''}`}>
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center h-full">

@@ -230,7 +230,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
         <div className="flex-1 flex flex-col items-center justify-center px-2" style={{marginLeft: '220px'}}>
           <div className="flex-1 w-full max-w-screen-md flex flex-col relative mx-auto" style={{marginLeft: 'auto', marginRight: 'auto'}}>
             <div className="flex-1 overflow-y-auto">
-              <ChatArea messages={chatMessages} />
+              <ChatArea messages={chatMessages} extraBottomSpace />
             </div>
             <div className="border-t border-gray-700 bg-gray-900 h-16 px-0 flex-shrink-0 fixed bottom-8 left-1/2 w-full" style={{transform: 'translateX(-50%)', minWidth: '320px', maxWidth: '700px'}}>
               <div className="h-16 bg-gray-800 border-t border-gray-700 px-4 flex items-center space-x-3 w-full">
