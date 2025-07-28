@@ -43,14 +43,39 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
   };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
-  // Dummy UserList für Demo (ersetzt durch echte Logik im Projekt)
-  const [userList] = useState<UserInfo[]>([
-    { id: '1', name: 'Anna', room: 'demo' },
-    { id: '2', name: 'Ben', room: 'demo' },
-    { id: '3', name: 'Chris', room: 'demo' },
-    { id: '4', name: 'Dana', room: 'demo' },
-    { id: '5', name: 'Eli', room: 'demo' },
-  ]);
+  // Dynamische UserList via Socket.IO Events
+  const [userList, setUserList] = useState<UserInfo[]>([]);
+
+  // Socket.IO Setup für User-Events
+  React.useEffect(() => {
+    // Dynamisch laden, um SSR zu vermeiden
+    const { io } = require('socket.io-client');
+    const socket = io({ path: '/api/socket', transports: ['websocket', 'polling'] });
+
+    // Join Room beim Mount (nutze Props)
+    socket.emit('join-room', { room: roomId, name: userName });
+
+    // Initiale User-Liste
+    socket.on('room-users', (users: { id: string; name: string }[]) => {
+      setUserList(users);
+    });
+    // User joined
+    socket.on('user-joined', (user: { id: string; name: string }) => {
+      setUserList(prev => {
+        if (prev.find(u => u.id === user.id)) return prev;
+        return [...prev, { ...user, room: roomId }];
+      });
+    });
+    // User left
+    socket.on('user-left', (user: { id: string; name: string }) => {
+      setUserList(prev => prev.filter(u => u.id !== user.id));
+    });
+
+    // Cleanup
+    return () => {
+      socket.disconnect();
+    };
+  }, [roomId, userName]);
 
   // Video-Streams: Eigenes Video + alle Peers
   const peerStreams = Array.from(peers.values()).map(p => ({ id: p.id, name: p.name, stream: p.stream }));
