@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { ChatArea } from './ChatArea';
 import { ChatInput } from './ChatInput';
 import { useWebRTC } from '@/hooks/useWebRTC';
-import { UserList } from './UserList';
 
   interface VideoRoomMobileProps {
     roomId: string;
@@ -20,7 +19,6 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
   onLeaveRoom,
   initialStream = null,
   mediaEnabled = true,
-  language = 'en',
 }) => {
   // WebRTC Hook (ohne Socket für Demo, ggf. anpassen)
   const {
@@ -28,7 +26,6 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
     peers
   } = useWebRTC(roomId, userName, null, initialStream, mediaEnabled);
 
-  // Dummy Chat State (ersetzt durch echte Logik im Projekt)
   // Typen lokal definieren, falls kein Import möglich
   type ChatMessage = {
     id: string;
@@ -42,38 +39,66 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
     room: string;
   };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-
-  // Dynamische UserList via Socket.IO Events
   const [userList, setUserList] = useState<UserInfo[]>([]);
+  const [socketReady, setSocketReady] = useState(false);
 
   // Socket.IO Setup für User-Events
   React.useEffect(() => {
-    // Dynamisch laden, um SSR zu vermeiden
-    const { io } = require('socket.io-client');
-    const socket = io({ path: '/api/socket', transports: ['websocket', 'polling'] });
+    let socket: import('socket.io-client').Socket | null = null;
+    let retryCount = 0;
+    const maxRetries = 5;
+    const retryDelay = 800;
 
-    // Join Room beim Mount (nutze Props)
-    socket.emit('join-room', { room: roomId, name: userName });
+    const connectSocket = async () => {
+      const ioClient = (await import('socket.io-client')).default;
+      socket = ioClient({ path: '/api/socket', transports: ['websocket', 'polling'] });
 
-    // Initiale User-Liste
-    socket.on('room-users', (users: { id: string; name: string }[]) => {
-      setUserList(users);
-    });
-    // User joined
-    socket.on('user-joined', (user: { id: string; name: string }) => {
-      setUserList(prev => {
-        if (prev.find(u => u.id === user.id)) return prev;
-        return [...prev, { ...user, room: roomId }];
+      socket.on('connect', () => setSocketReady(true));
+      socket.on('disconnect', () => setSocketReady(false));
+
+      // Fehler-Handler für Verbindungsprobleme
+      socket.on('connect_error', (err: Error) => {
+        setSocketReady(false);
+        if (err && err.message && err.message.includes('server error')) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(() => {
+              socket?.disconnect();
+              connectSocket();
+            }, retryDelay);
+          } else {
+            // Optional: User-Feedback nach zu vielen Fehlversuchen
+            // z.B. setRoomState('error');
+          }
+        }
       });
-    });
-    // User left
-    socket.on('user-left', (user: { id: string; name: string }) => {
-      setUserList(prev => prev.filter(u => u.id !== user.id));
-    });
+
+      // Join Room beim Mount (nutze Props)
+      socket.emit('join-room', { room: roomId, name: userName });
+
+      // Initiale User-Liste
+      socket.on('room-users', (users: { id: string; name: string }[]) => {
+        setUserList(users.map(u => ({ ...u, room: roomId })));
+      });
+      // User joined
+      socket.on('user-joined', (user: { id: string; name: string }) => {
+        setUserList((prev: UserInfo[]) => {
+          if (prev.find(u => u.id === user.id)) return prev;
+          return [...prev, { ...user, room: roomId }];
+        });
+      });
+      // User left
+      socket.on('user-left', (user: { id: string; name: string }) => {
+        setUserList((prev: UserInfo[]) => prev.filter(u => u.id !== user.id));
+      });
+    };
+    connectSocket();
 
     // Cleanup
     return () => {
-      socket.disconnect();
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, [roomId, userName]);
 
@@ -135,7 +160,15 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
             <ChatArea messages={chatMessages} />
           </div>
           <div className="border-t border-gray-800">
-            <ChatInput onSendMessage={msg => setChatMessages(m => [...m, { id: Date.now(), name: userName, message: msg, timestamp: new Date().toISOString() }])} />
+            <ChatInput onSendMessage={msg => setChatMessages(m => [
+              ...m,
+              {
+                id: Date.now().toString(),
+                name: userName,
+                message: msg,
+                timestamp: new Date().toISOString()
+              }
+            ])} />
           </div>
         </div>
       </div>

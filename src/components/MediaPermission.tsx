@@ -6,6 +6,7 @@ interface MediaPermissionProps {
   onPermissionGranted: (stream: MediaStream) => void;
   onPermissionDenied: (error: string) => void;
   onEnterWithoutMedia?: () => void; // New: Allow entering without media
+  isSocketReady?: boolean; // Neu: Socket.IO-Status
 }
 
 // Mobile Detection
@@ -23,7 +24,8 @@ const isSecureContext = () => {
 export const MediaPermission: React.FC<MediaPermissionProps> = ({
   onPermissionGranted,
   onPermissionDenied,
-  onEnterWithoutMedia
+  onEnterWithoutMedia,
+  isSocketReady
 }) => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -266,9 +268,14 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
 
         <button
           onClick={requestPermissions}
-          disabled={isRequesting || !!browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure)}
+          disabled={
+            isRequesting ||
+            !!browserError ||
+            (deviceInfo?.isMobile && !deviceInfo?.isSecure) ||
+            (typeof isSocketReady === 'boolean' && !isSocketReady)
+          }
           className={`w-full font-semibold py-3 px-6 rounded-lg transition duration-200 ${
-            isRequesting || browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure)
+            isRequesting || browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure) || (typeof isSocketReady === 'boolean' && !isSocketReady)
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white transform hover:scale-105'
           }`}
@@ -277,6 +284,11 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
               Zugriff wird angefragt...
+            </div>
+          ) : (typeof isSocketReady === 'boolean' && !isSocketReady) ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500 mr-2"></div>
+              Verbinde mit Server...
             </div>
           ) : deviceInfo?.isMobile && !deviceInfo?.isSecure ? (
             'HTTPS erforderlich für Mobile'

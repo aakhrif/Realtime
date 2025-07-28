@@ -109,13 +109,16 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
 
           console.log(`✅ User ${name} joined room ${room}. Total: ${allSocketIds.length}, Existing: ${currentUsers.length}`);
           console.log(`📋 Sending ${currentUsers.length} existing users:`, currentUsers);
-
-        } catch (error: any) {
-          console.error('❌ Error in join-room:', error);
-          // Im development: Fehlerdetails an Client senden
-          if (process.env.NODE_ENV !== 'production') {
-            socket.emit('error', { message: error?.message || String(error) });
+        } catch (error: unknown) {
+          if (error instanceof Error) {
+            console.error('❌ Error in join-room:', error.message);
+            if (process.env.NODE_ENV !== 'production') {
+              socket.emit('error', { message: error.message });
+            } else {
+              socket.emit('error', { message: 'Failed to join room' });
+            }
           } else {
+            console.error('❌ Error in join-room:', String(error));
             socket.emit('error', { message: 'Failed to join room' });
           }
         }

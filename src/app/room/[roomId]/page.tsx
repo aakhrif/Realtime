@@ -110,14 +110,17 @@ export default function RoomPage() {
 
   // Permission Request State
   if (roomState === 'permission-request') {
+    // Socket-Status aus globalem Window holen (wird von VideoRoomMobile gesetzt)
+    const isSocketReady = typeof window !== 'undefined' ? (window as any).__videoRoomMobileSocketReady === true : false;
     return (
       <div className="relative">
         <MediaPermission
           onPermissionGranted={handlePermissionGranted}
           onPermissionDenied={handlePermissionDenied}
           onEnterWithoutMedia={handleEnterWithoutMedia}
+          isSocketReady={isSocketReady}
         />
-        
+
         {/*
         <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
           <button
@@ -165,7 +168,7 @@ export default function RoomPage() {
           userName={userName!}
           onLeaveRoom={handleLeaveRoom}
           mediaEnabled={!!mediaStream}
-          language={roomLanguage}
+          // language={roomLanguage}
         />
       );
     }
