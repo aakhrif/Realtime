@@ -204,7 +204,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       {/* Main Content Area */}
       <div className={`flex-1 flex overflow-hidden`}> 
         {/* UserList: immer links, schmale Sidebar */}
-        <div className="flex flex-col border-r border-gray-700 bg-gray-900 max-w-xs w-[220px] min-w-[180px] relative">
+        <div className="flex flex-col border-r border-gray-700 bg-gray-900 max-w-xs w-[220px] min-w-[180px] h-screen fixed top-0 left-0 z-30">
           <UserList
             users={roomUsers}
             currentUserId={socket?.id || ''}
@@ -227,16 +227,20 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           )}
         </div>
         {/* Chat-Bereich mittig, max-w-screen-md, Abstand minimiert */}
-        <div className="flex-1 flex flex-col items-center justify-center px-2">
-          <div className="flex-1 w-full max-w-screen-md flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center px-2" style={{marginLeft: '220px'}}>
+          <div className="flex-1 w-full max-w-screen-md flex flex-col relative mx-auto" style={{marginLeft: 'auto', marginRight: 'auto'}}>
             <div className="flex-1 overflow-y-auto">
               <ChatArea messages={chatMessages} />
             </div>
-            <div className="border-t border-gray-700">
-              <ChatInput 
-                onSendMessage={handleSendMessage}
-                disabled={!socket}
-              />
+            <div className="border-t border-gray-700 bg-gray-900 h-16 px-0 flex-shrink-0 fixed bottom-8 left-1/2 w-full" style={{transform: 'translateX(-50%)', minWidth: '320px', maxWidth: '700px'}}>
+              <div className="h-16 bg-gray-800 border-t border-gray-700 px-4 flex items-center space-x-3 w-full">
+                <div className="flex-1 w-full">
+                  <ChatInput 
+                    onSendMessage={handleSendMessage}
+                    disabled={!socket}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

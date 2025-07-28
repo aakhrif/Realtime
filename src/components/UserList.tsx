@@ -68,15 +68,15 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, currentUserId, stream
 
 export const UserList: React.FC<UserListProps> = ({ users, currentUserId, peers, localStream }) => {
   return (
-    <div className="w-full h-full bg-gray-800 flex flex-col">
+    <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-gray-700 flex-shrink-0">
         <h3 className="text-white font-semibold text-sm">
           Online Users ({users.length})
         </h3>
       </div>
       {/* User List */}
-      <div className="flex-1 overflow-y-auto flex flex-col space-y-4 p-2">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col space-y-4 p-2">
         {users.map((user) => (
           <UserListItem
             key={user.id}
