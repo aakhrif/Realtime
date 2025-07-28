@@ -8,20 +8,20 @@ export default function Home() {
   const [inputRoomId, setInputRoomId] = useState('');
   const [inputUserName, setInputUserName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  const [roomExists, setRoomExists] = useState<boolean | null>(null);
-  const [claimRoom, setClaimRoom] = useState(false);
+  // const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  // const [claimRoom, setClaimRoom] = useState(false);
 
-  useEffect(() => {
-    if (!inputRoomId) {
-      setRoomExists(null);
-      return;
-    }
-    // Room-Existenz abfragen
-    fetch(`/api/room-exists?roomId=${encodeURIComponent(inputRoomId)}`)
-      .then(res => res.json())
-      .then(data => setRoomExists(data.exists))
-      .catch(() => setRoomExists(null));
-  }, [inputRoomId]);
+  // useEffect(() => {
+  //   if (!inputRoomId) {
+  //     setRoomExists(null);
+  //     return;
+  //   }
+  //   // Room-Existenz abfragen
+  //   fetch(`/api/room-exists?roomId=${encodeURIComponent(inputRoomId)}`)
+  //     .then(res => res.json())
+  //     .then(data => setRoomExists(data.exists))
+  //     .catch(() => setRoomExists(null));
+  // }, [inputRoomId]);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +37,10 @@ export default function Home() {
     const roomId = inputRoomId.trim();
     const userName = inputUserName.trim();
     
-    let url = `/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`;
-    if (!roomExists && claimRoom) {
-      url += '&claim=1';
-    }
+    const url = `/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`;
+    // if (!roomExists && claimRoom) {
+    //   url += '&claim=1';
+    // }
     router.push(url);
   };
 
@@ -117,7 +117,7 @@ export default function Home() {
 
           <button
             type="submit"
-            disabled={isJoining || (roomExists === false && claimRoom)}
+            disabled={isJoining }
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none flex items-center justify-between"
           >
             <span className="flex-1 text-left">
