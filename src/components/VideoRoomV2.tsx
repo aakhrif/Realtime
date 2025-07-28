@@ -28,6 +28,8 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   mediaEnabled = true,
   language = 'en',
 }) => {
+  // Topic für den Raum
+  const [topic, setTopic] = useState<string>('Heutiges Thema: Gott und die Welt');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -181,10 +183,10 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
       {/* Header */}
-      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6" style={{marginLeft: '220px'}}>
+      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6" style={{marginLeft: '300px'}}>
         <div className="flex items-center space-x-4">
           <h1 className="text-white text-lg font-semibold">Room: {roomId}</h1>
-          <div className="text-gray-400 text-sm">Welcome, {userName}!</div>
+          <div className="text-gray-400 text-sm">{topic}</div>
         </div>
         <div className="flex items-center space-x-2">
           {error && (
@@ -204,7 +206,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       {/* Main Content Area */}
       <div className={`flex-1 flex overflow-hidden`}> 
         {/* UserList: immer links, schmale Sidebar */}
-        <div className="flex flex-col border-r border-gray-700 bg-gray-900 max-w-xs w-[220px] min-w-[180px] h-screen fixed top-0 left-0 z-30">
+        <div className="flex flex-col border-r border-gray-700 bg-gray-900 max-w-sm w-[300px] min-w-[240px] h-screen fixed top-0 left-0 z-30">
           <UserList
             users={roomUsers}
             currentUserId={socket?.id || ''}
@@ -227,7 +229,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           )}
         </div>
         {/* Chat-Bereich mittig, max-w-screen-md, Abstand minimiert */}
-        <div className="flex-1 flex flex-col items-center justify-center px-2" style={{marginLeft: '220px'}}>
+        <div className="flex-1 flex flex-col items-center justify-center px-2" style={{marginLeft: '300px'}}>
           <div className="flex-1 w-full max-w-screen-md flex flex-col relative mx-auto" style={{marginLeft: 'auto', marginRight: 'auto'}}>
             <div className="flex-1 overflow-y-auto">
               <ChatArea messages={chatMessages} extraBottomSpace />

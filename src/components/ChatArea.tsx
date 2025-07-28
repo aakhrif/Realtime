@@ -86,7 +86,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Scroll-to-Top Button */}
       <div className="absolute left-0 right-0 top-0">
         {messages.length > 10 && (
-          <div className="sticky top-0 z-30 flex justify-center pointer-events-auto" style={{paddingTop: '1.5rem'}}>
+          <div className="sticky top-0 z-30 flex justify-center pointer-events-auto" style={{paddingTop: '10.5rem'}}>
             {!atBottom ? (
               <button
                 onClick={() => {
@@ -117,7 +117,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div ref={messagesTopRef} style={{height: '2.5rem'}} />
       </div>
       {/* Nachrichtenliste startet exakt unterhalb der verbotenen Zone */}
-      <div ref={messagesScrollRef} className="absolute left-0 right-0 scrollbar-hide" style={{ top: '8rem', bottom: 0, overflowY: 'auto' }}>
+      <div ref={messagesScrollRef} className="absolute left-0 right-0 scrollbar-hide" style={{ top: '16rem', bottom: 0, overflowY: 'auto' }}>
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center h-full">
@@ -141,13 +141,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <div className="space-y-4 flex flex-col">
             {Object.entries(messageGroups).map(([date, dateMessages]) => (
               <div key={date}>
-                {/* Date Separator */}
-                <div className="flex items-center justify-center my-4">
-                  <div className="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-xs">
-                    {date}
-                  </div>
-                </div>
-                {/* Messages for this date */}
+                {/* Messages for this date (ohne Date-Separator) */}
                 <div className="space-y-2 flex flex-col">
                   {dateMessages.map((message) => (
                     <div
