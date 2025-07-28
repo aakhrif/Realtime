@@ -181,7 +181,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
       {/* Header */}
-      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6">
+      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6" style={{marginLeft: '220px'}}>
         <div className="flex items-center space-x-4">
           <h1 className="text-white text-lg font-semibold">Room: {roomId}</h1>
           <div className="text-gray-400 text-sm">Welcome, {userName}!</div>
