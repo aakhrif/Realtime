@@ -148,6 +148,14 @@ export const useWebRTC = (
 
     peer.on('error', (err: Error) => {
       console.error(`❌ Peer connection error with ${userName}:`, err);
+      // Unterdrücke User-Initiated Abort Fehler (z.B. wenn User Raum verlässt)
+      if (
+        err.message?.includes('User-Initiated Abort') ||
+        err.message?.includes('reason=Close called')
+      ) {
+        // Kein setError, Systemnachricht wird im Chat angezeigt
+        return;
+      }
       setError(`Connection failed with user ${userName}: ${err.message}`);
     });
 

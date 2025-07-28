@@ -79,6 +79,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       setChatMessages(prev => [...prev, message]);
     };
 
+
     const handleUserJoined = (user: UserInfo) => {
       console.log('👥 User joined:', user);
       setRoomUsers(prev => {
@@ -87,11 +88,32 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
         if (exists) return prev;
         return [...prev, user];
       });
+      // Systemnachricht für Beitritt
+      setChatMessages(prev => [
+        ...prev,
+        {
+          id: `system-join-${user.id}-${Date.now()}`,
+          name: 'System',
+          message: `${user.name} ist dem Raum beigetreten.`,
+          timestamp: new Date().toISOString(),
+        }
+      ]);
     };
 
     const handleUserLeft = (user: UserInfo) => {
       console.log('👋 User left:', user);
       setRoomUsers(prev => prev.filter(u => u.id !== user.id));
+      // Systemnachricht für Verlassen
+      setChatMessages(prev => [
+        ...prev,
+        {
+          id: `system-leave-${user.id}-${Date.now()}`,
+          name: 'System',
+          message: `${user.name} hat den Raum verlassen.`,
+          timestamp: new Date().toISOString(),
+          type: 'error', // Markiere als Fehler für rote Darstellung
+        }
+      ]);
     };
 
     const handleRoomUsers = (users: UserInfo[]) => {

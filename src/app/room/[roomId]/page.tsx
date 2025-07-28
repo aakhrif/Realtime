@@ -6,6 +6,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { MediaPermission } from '@/components/MediaPermission';
 import { VideoRoomV2 } from '@/components/VideoRoomV2';
+import SocketManager from '@/lib/socketManager';
 
 type RoomState = 'loading' | 'permission-request' | 'video-room' | 'error';
 
@@ -54,7 +55,10 @@ export default function RoomPage() {
       mediaStream.getTracks().forEach(track => track.stop());
       setMediaStream(null);
     }
-    
+    // Socket sofort disconnecten, damit andere User es sehen
+    if (typeof window !== 'undefined') {
+      SocketManager.disconnect();
+    }
     // Navigate back to home
     router.push('/');
   };
@@ -111,7 +115,7 @@ export default function RoomPage() {
           onEnterWithoutMedia={handleEnterWithoutMedia}
         />
         
-        {/* Header with room info and back button */}
+        {/*
         <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
           <button
             onClick={handleBackToHome}
@@ -127,6 +131,7 @@ export default function RoomPage() {
             <span className="text-sm">Room: {roomId} | {userName}</span>
           </div>
         </div>
+        */}
 
         {/* Permission Error Display */}
         {permissionError && (
