@@ -32,44 +32,68 @@ class SocketManager {
     this.isConnecting = true;
     
     this.connectionPromise = new Promise((resolve, reject) => {
-      console.log('🔌 SocketManager: Creating new socket connection...');
-      
-      const socket = io({
-        path: '/api/socket',
-        transports: ['polling'],
-        timeout: 20000,
-        forceNew: false, // Reuse connection if possible
-        upgrade: false
-      });
+      let attempt = 0;
+      const maxDelay = 10000;
+      const baseDelay = 800;
+      let cancelled = false;
 
-      socket.on('connect', () => {
-        console.log('✅ SocketManager: Socket connected:', socket.id);
-        this.instance = socket;
-        this.isConnecting = false;
-        resolve(socket);
-      });
+      const tryConnect = () => {
+        attempt++;
+        const delay = Math.min(baseDelay * attempt, maxDelay);
+        console.log(`🔌 SocketManager: Attempt ${attempt} to connect...`);
 
-      socket.on('disconnect', (reason) => {
-        console.log('❌ SocketManager: Socket disconnected:', reason);
-        // Don't reset instance immediately, might reconnect
-      });
+        const socket = io({
+          path: '/api/socket',
+          transports: ['polling'],
+          timeout: 20000,
+          forceNew: false,
+          upgrade: false
+        });
 
-      socket.on('connect_error', (error) => {
-        console.error('❌ SocketManager: Connection error:', error);
-        this.isConnecting = false;
-        this.connectionPromise = null;
-        reject(error);
-      });
+        let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
+          if (!socket.connected) {
+            console.error('❌ SocketManager: Connection timeout');
+            socket.close();
+            if (!cancelled) retryOrReject(new Error('Socket connection timeout'));
+          }
+        }, 25000);
 
-      // Timeout fallback
-      setTimeout(() => {
-        if (!socket.connected) {
-          console.error('❌ SocketManager: Connection timeout');
+        socket.on('connect', () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          console.log('✅ SocketManager: Socket connected:', socket.id);
+          this.instance = socket;
           this.isConnecting = false;
-          this.connectionPromise = null;
-          reject(new Error('Socket connection timeout'));
+          cancelled = true;
+          resolve(socket);
+        });
+
+        socket.on('disconnect', (reason) => {
+          console.log('❌ SocketManager: Socket disconnected:', reason);
+        });
+
+        socket.on('connect_error', (error) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          console.error('❌ SocketManager: Connection error:', error);
+          socket.close();
+          if (!cancelled) retryOrReject(error);
+        });
+
+        function retryOrReject(error: Error) {
+          if (attempt < 10) {
+            setTimeout(() => {
+              if (!cancelled) tryConnect();
+            }, delay);
+          } else {
+            cancelled = true;
+            // Reset flags
+            (SocketManager as any).isConnecting = false;
+            (SocketManager as any).connectionPromise = null;
+            reject(error);
+          }
         }
-      }, 25000);
+      };
+
+      tryConnect();
     });
 
     return this.connectionPromise;
