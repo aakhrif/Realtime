@@ -1,7 +1,7 @@
 'use client';
 
 import { ChatMessage } from '@/hooks/useSocket';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ChatAreaProps {
   messages: ChatMessage[];
@@ -15,6 +15,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesTopRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
+
+  // Scroll-Handler für Toggle-Button
+  useEffect(() => {
+    const scrollEl = messagesScrollRef.current;
+    if (!scrollEl) return;
+    const handle = () => {
+      // 20px Toleranz
+      setAtBottom(scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 20);
+    };
+    scrollEl.addEventListener('scroll', handle);
+    // Initial prüfen
+    handle();
+    return () => scrollEl.removeEventListener('scroll', handle);
+  }, [messagesScrollRef]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -71,25 +87,37 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       <div className="absolute left-0 right-0 top-0">
         {messages.length > 10 && (
           <div className="sticky top-0 z-30 flex justify-center pointer-events-auto" style={{paddingTop: '1.5rem'}}>
-            <button
-              onClick={() => {
-                if (messagesTopRef.current) {
-                  // Offset, damit die erste Nachricht nicht unter der Leiste verschwindet
-                  const y = messagesTopRef.current.getBoundingClientRect().top + window.scrollY - 80;
-                  window.scrollTo({ top: y, behavior: 'smooth' });
-                }
-              }}
-              className="bg-gray-700 text-white px-3 py-1 rounded-full text-xs shadow hover:bg-gray-600 transition mt-2 cursor-pointer"
-              type="button"
-            >
-              ↑ Alte Nachrichten anzeigen
-            </button>
+            {!atBottom ? (
+              <button
+                onClick={() => {
+                  if (messagesScrollRef.current) {
+                    messagesScrollRef.current.scrollTo({ top: messagesScrollRef.current.scrollHeight, behavior: 'smooth' });
+                  }
+                }}
+                className="bg-gray-700 text-white px-3 py-1 rounded-full text-xs shadow hover:bg-gray-600 transition mt-2 cursor-pointer"
+                type="button"
+              >
+                ↓ Neue Nachrichten anzeigen
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (messagesScrollRef.current) {
+                    messagesScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className="bg-gray-700 text-white px-3 py-1 rounded-full text-xs shadow hover:bg-gray-600 transition mt-2 cursor-pointer"
+                type="button"
+              >
+                ↑ Alte Nachrichten anzeigen
+              </button>
+            )}
           </div>
         )}
         <div ref={messagesTopRef} style={{height: '2.5rem'}} />
       </div>
       {/* Nachrichtenliste startet exakt unterhalb der verbotenen Zone */}
-      <div className="absolute left-0 right-0 scrollbar-hide" style={{ top: '8rem', bottom: 0, overflowY: 'auto' }}>
+      <div ref={messagesScrollRef} className="absolute left-0 right-0 scrollbar-hide" style={{ top: '8rem', bottom: 0, overflowY: 'auto' }}>
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center h-full">
