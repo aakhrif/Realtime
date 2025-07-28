@@ -31,8 +31,8 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
       console.log(`✅ User connected: ${socket.id}`);
 
       // User joins a room
-      socket.on('join-room', async ({ room, name }: { room: string; name: string }) => {
-        console.log(`🚪 ${name} (${socket.id}) joining room: ${room}`);
+      socket.on('join-room', async ({ room, name, mediaEnabled }: { room: string; name: string; mediaEnabled?: boolean }) => {
+        console.log(`🚪 ${name} (${socket.id}) joining room: ${room} | mediaEnabled: ${mediaEnabled}`);
         
         try {
           // Leave previous room if any

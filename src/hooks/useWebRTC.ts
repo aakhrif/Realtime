@@ -233,7 +233,7 @@ export const useWebRTC = (
         
         if (mounted && socket.connected) {
           console.log(`🚪 Joining room ${roomId} as ${userName}${enableMedia ? ' (with media)' : ' (media-free)'}`);
-          socket.emit('join-room', { room: roomId, name: userName });
+          socket.emit('join-room', { room: roomId, name: userName, mediaEnabled: enableMedia });
         }
       } catch (err) {
         console.error('Failed to initialize WebRTC:', err);

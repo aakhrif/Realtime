@@ -13,9 +13,14 @@
     "docker:prod": "docker-compose up --build -d",
     "docker:stop": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "deploy": "chmod +x deploy.sh && ./deploy.sh"
+    "deploy": "chmod +x deploy.sh && ./deploy.sh",
+    "seed": "node prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.12.0",
     "@types/redis": "^4.0.10",
     "next": "15.4.4",
     "react": "19.1.0",
@@ -24,6 +29,7 @@
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "sqlite3": "^5.1.7",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -36,7 +42,9 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
+    "prisma": "^6.12.0",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

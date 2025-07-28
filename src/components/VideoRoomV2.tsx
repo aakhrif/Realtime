@@ -9,7 +9,6 @@ import { RoomDebugger } from '@/components/RoomDebugger';
 import { UserList } from '@/components/UserList';
 import { ChatArea } from '@/components/ChatArea';
 import { ChatInput } from '@/components/ChatInput';
-import { VideoGrid } from '@/components/VideoGrid';
 import SocketManager from '@/lib/socketManager';
 
 interface VideoRoomV2Props {
@@ -17,7 +16,8 @@ interface VideoRoomV2Props {
   userName: string;
   onLeaveRoom: () => void;
   initialStream?: MediaStream | null;
-  mediaEnabled?: boolean; // New: Allow joining without media
+  mediaEnabled?: boolean;
+  language?: string;
 }
 
 export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
@@ -25,10 +25,12 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   userName,
   onLeaveRoom,
   initialStream = null,
-  mediaEnabled = true // Default: try to get media
+  mediaEnabled = true,
+  language = 'en',
 }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectError, setConnectError] = useState<string | null>(null);
   
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -37,7 +39,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
   // Initialize socket connection using singleton
   useEffect(() => {
     console.log('🔌 VideoRoomV2: Getting socket from SocketManager...');
-    
+    setConnectError(null);
     SocketManager.getSocket()
       .then((socketInstance) => {
         console.log('✅ VideoRoomV2: Socket received from manager:', socketInstance.id);
@@ -45,6 +47,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       })
       .catch((error) => {
         console.error('❌ VideoRoomV2: Failed to get socket:', error);
+        setConnectError('Verbindung zum Server fehlgeschlagen. Bitte versuche es später erneut.');
       });
 
     return () => {
@@ -119,6 +122,24 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
     }
   }, [localStream, mediaEnabled]);
 
+  // Fehleranzeige bei Socket-Connect-Fehler
+  if (connectError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 via-purple-900 to-indigo-900">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Verbindungsfehler</h1>
+          <p className="text-gray-600 mb-6">{connectError}</p>
+          <button
+            onClick={onLeaveRoom}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+          >
+            Zurück zur Startseite
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleScreenShare = async () => {
     try {
       await getScreenShare();
@@ -158,8 +179,31 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Chat-Bereich: nimmt volle Breite/Höhe bis zur UserList ein */}
+      <div className={`flex-1 flex overflow-hidden ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}> 
+        {/* UserList: links bei LTR, rechts bei RTL */}
+        <div className={`w-80 flex flex-col ${language === 'ar' ? 'border-r border-gray-700' : 'border-l border-gray-700'} relative`}>
+          <UserList
+            users={roomUsers}
+            currentUserId={socket?.id || ''}
+            peers={peers}
+            localStream={localStream}
+          />
+          {!isLoading && (
+            <div className="absolute bottom-0 left-0 w-full z-10">
+              <VideoControls
+                isVideoEnabled={isVideoEnabled}
+                isAudioEnabled={isAudioEnabled}
+                isScreenSharing={isScreenSharing}
+                onToggleVideo={toggleVideo}
+                onToggleAudio={toggleAudio}
+                onStartScreenShare={handleScreenShare}
+                onStopScreenShare={stopScreenShare}
+                onLeaveCall={onLeaveRoom}
+              />
+            </div>
+          )}
+        </div>
+        {/* Chat-Bereich */}
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto">
             <ChatArea messages={chatMessages} />
@@ -170,15 +214,6 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
               disabled={!socket}
             />
           </div>
-        </div>
-        {/* UserList fixiert rechts */}
-        <div className="w-80 flex flex-col border-l border-gray-700">
-          <UserList
-            users={roomUsers}
-            currentUserId={socket?.id || ''}
-            peers={peers}
-            localStream={localStream}
-          />
         </div>
       </div>
 

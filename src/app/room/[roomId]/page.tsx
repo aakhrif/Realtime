@@ -14,8 +14,8 @@ export default function RoomPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const roomId = params.roomId as string;
-  const userName = searchParams.get('name');
+  const roomId = params?.roomId as string;
+  const userName = searchParams?.get('name');
   
   const [roomState, setRoomState] = useState<RoomState>('loading');
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
@@ -145,6 +145,10 @@ export default function RoomPage() {
   }
 
   // Video Room State
+  // Beispiel: Sprache aus Room-Stats, hier als Platzhalter 'ar' oder 'en'
+  // In der echten App: Hole language aus Room-Stats/Context
+  const roomLanguage = 'ar'; // z.B. 'ar' für Arabisch, 'en' für Englisch
+
   if (roomState === 'video-room') {
     return (
       <VideoRoomV2
@@ -152,6 +156,7 @@ export default function RoomPage() {
         userName={userName!}
         onLeaveRoom={handleLeaveRoom}
         mediaEnabled={!!mediaStream}
+        language={roomLanguage}
       />
     );
   }

@@ -17,7 +17,6 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   onToggleAudio,
   onStartScreenShare,
   onStopScreenShare,
-  onLeaveCall
 }) => {
   return (
     <div className="flex items-center justify-center space-x-4 bg-gray-800 py-4 px-6 rounded-lg">
@@ -81,7 +80,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
       </button>
 
       {/* Leave Call */}
-      {onLeaveCall && (
+      {/* {onLeaveCall && (
         <button
           onClick={onLeaveCall}
           className="p-3 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors"
@@ -91,7 +90,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
           </svg>
         </button>
-      )}
+      )} */}
     </div>
   );
 };

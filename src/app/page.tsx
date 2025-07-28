@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -8,6 +8,20 @@ export default function Home() {
   const [inputRoomId, setInputRoomId] = useState('');
   const [inputUserName, setInputUserName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  const [claimRoom, setClaimRoom] = useState(false);
+
+  useEffect(() => {
+    if (!inputRoomId) {
+      setRoomExists(null);
+      return;
+    }
+    // Room-Existenz abfragen
+    fetch(`/api/room-exists?roomId=${encodeURIComponent(inputRoomId)}`)
+      .then(res => res.json())
+      .then(data => setRoomExists(data.exists))
+      .catch(() => setRoomExists(null));
+  }, [inputRoomId]);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +37,11 @@ export default function Home() {
     const roomId = inputRoomId.trim();
     const userName = inputUserName.trim();
     
-    router.push(`/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`);
+    let url = `/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`;
+    if (!roomExists && claimRoom) {
+      url += '&claim=1';
+    }
+    router.push(url);
   };
 
   const generateRoomId = () => {
@@ -99,17 +117,19 @@ export default function Home() {
 
           <button
             type="submit"
-            disabled={isJoining}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none"
+            disabled={isJoining || (roomExists === false && claimRoom)}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none flex items-center justify-between"
           >
-            {isJoining ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Joining Room...
-              </span>
-            ) : (
-              '🎥 Join Video Room'
-            )}
+            <span className="flex-1 text-left">
+              {isJoining ? (
+                <span className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Joining Room...
+                </span>
+              ) : (
+                '🎥 Join Video Room'
+              )}
+            </span>
           </button>
         </form>
 
@@ -126,3 +146,4 @@ export default function Home() {
     </div>
   );
 }
+

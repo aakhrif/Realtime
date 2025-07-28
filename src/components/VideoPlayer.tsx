@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 interface VideoPlayerProps {
   stream: MediaStream | null;
@@ -36,13 +37,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {isLocal ? 'You' : userName}
       </div>
       {!stream && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-700">
+              <Image src="/camera-off.svg" alt="Camera off" width={64} height={64} className="mb-2 opacity-80" />
           <div className="text-white text-center">
-            <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
-              <span className="text-2xl">{(isLocal ? 'You' : userName).charAt(0).toUpperCase()}</span>
-            </div>
-            <p className="text-sm">{isLocal ? 'You' : userName}</p>
-            <p className="text-xs text-gray-400">No video</p>
+            <p className="text-sm font-semibold">{isLocal ? 'You' : userName}</p>
+            <p className="text-xs text-gray-400">Kamera aus</p>
           </div>
         </div>
       )}
