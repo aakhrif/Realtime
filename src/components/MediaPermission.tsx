@@ -271,11 +271,10 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
           disabled={
             isRequesting ||
             !!browserError ||
-            (deviceInfo?.isMobile && !deviceInfo?.isSecure) ||
-            (typeof isSocketReady === 'boolean' && !isSocketReady)
+            (deviceInfo?.isMobile && !deviceInfo?.isSecure)
           }
           className={`w-full font-semibold py-3 px-6 rounded-lg transition duration-200 ${
-            isRequesting || browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure) || (typeof isSocketReady === 'boolean' && !isSocketReady)
+            isRequesting || browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure)
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white transform hover:scale-105'
           }`}
@@ -284,11 +283,6 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
               Zugriff wird angefragt...
-            </div>
-          ) : (typeof isSocketReady === 'boolean' && !isSocketReady) ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500 mr-2"></div>
-              Verbinde mit Server...
             </div>
           ) : deviceInfo?.isMobile && !deviceInfo?.isSecure ? (
             'HTTPS erforderlich für Mobile'
