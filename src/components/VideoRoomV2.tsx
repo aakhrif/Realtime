@@ -96,6 +96,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           name: 'System',
           message: `${user.name} ist dem Raum beigetreten.`,
           timestamp: new Date().toISOString(),
+          type: 'join',
         }
       ]);
     };
@@ -111,7 +112,7 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
           name: 'System',
           message: `${user.name} hat den Raum verlassen.`,
           timestamp: new Date().toISOString(),
-          type: 'error', // Markiere als Fehler für rote Darstellung
+          type: 'leave', // Markiere als Leave für rote Darstellung
         }
       ]);
     };

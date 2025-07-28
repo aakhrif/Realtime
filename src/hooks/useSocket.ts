@@ -16,7 +16,7 @@ export interface ChatMessage {
   name: string;
   message: string;
   timestamp: string;
-  type?: 'error' | 'info';
+  type?: 'error' | 'info' | 'join' | 'leave';
 }
 
 export const useSocket = () => {

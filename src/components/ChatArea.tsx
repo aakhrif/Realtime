@@ -98,7 +98,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   <div key={message.id} className="group">
                     <div className="flex items-start space-x-3">
                       {/* Avatar */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${message.name === 'System' ? (message.type === 'error' ? 'bg-red-500' : 'bg-gray-500') : 'bg-blue-500'}`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0
+                          ${message.name === 'System'
+                            ? message.type === 'error' || message.type === 'leave'
+                              ? 'bg-rose-300' // sanftes Rot
+                              : message.type === 'join'
+                                ? 'bg-emerald-300' // sanftes Grün
+                                : 'bg-gray-500'
+                            : 'bg-blue-500'}
+                        `}
+                      >
                         {message.name.charAt(0).toUpperCase()}
                       </div>
 
@@ -106,7 +116,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       <div className="flex-1 min-w-0">
                         {/* Header */}
                         <div className="flex items-baseline space-x-2 mb-1">
-                          <span className={`font-medium text-sm ${message.name === 'System' ? (message.type === 'error' ? 'text-red-400' : 'text-gray-300') : 'text-white'}`}>
+                          <span
+                            className={`font-medium text-sm
+                              ${message.name === 'System'
+                                ? message.type === 'error' || message.type === 'leave'
+                                  ? 'text-rose-500'
+                                  : message.type === 'join'
+                                    ? 'text-emerald-600'
+                                    : 'text-gray-300'
+                                : 'text-white'}
+                            `}
+                          >
                             {message.name}
                           </span>
                           <span className="text-gray-400 text-xs">
@@ -115,7 +135,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         </div>
 
                         {/* Message Text */}
-                        <div className={`text-sm break-words ${message.name === 'System' && message.type === 'error' ? 'text-red-300' : 'text-gray-200'}`}>
+                        <div
+                          className={`text-sm break-words
+                            ${message.name === 'System'
+                              ? message.type === 'error' || message.type === 'leave'
+                                ? 'text-rose-500'
+                                : message.type === 'join'
+                                  ? 'text-emerald-600'
+                                  : 'text-gray-200'
+                              : 'text-gray-200'}
+                          `}
+                        >
                           {message.message}
                         </div>
                       </div>
