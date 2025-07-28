@@ -1,6 +1,6 @@
 'use client';
 
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { VideoPlayer } from '@/components/NichtBenutzt_VideoPlayer';
 import { PeerConnection } from '@/hooks/useWebRTC';
 
 interface VideoGridProps {
