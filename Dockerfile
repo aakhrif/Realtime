@@ -31,8 +31,10 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/src/generated/prisma/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

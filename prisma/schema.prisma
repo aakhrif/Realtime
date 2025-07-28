@@ -13,6 +13,7 @@ model User {
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
