@@ -202,9 +202,9 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex overflow-hidden ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}> 
-        {/* UserList: links bei LTR, rechts bei RTL */}
-        <div className={`w-80 flex flex-col ${language === 'ar' ? 'border-r border-gray-700' : 'border-l border-gray-700'} relative`}>
+      <div className={`flex-1 flex overflow-hidden`}> 
+        {/* UserList: immer links, schmale Sidebar */}
+        <div className="flex flex-col border-r border-gray-700 bg-gray-900 max-w-xs w-[220px] min-w-[180px] relative">
           <UserList
             users={roomUsers}
             currentUserId={socket?.id || ''}
@@ -226,16 +226,18 @@ export const VideoRoomV2: React.FC<VideoRoomV2Props> = ({
             </div>
           )}
         </div>
-        {/* Chat-Bereich */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <ChatArea messages={chatMessages} />
-          </div>
-          <div className="border-t border-gray-700">
-            <ChatInput 
-              onSendMessage={handleSendMessage}
-              disabled={!socket}
-            />
+        {/* Chat-Bereich mittig, max-w-screen-md, Abstand minimiert */}
+        <div className="flex-1 flex flex-col items-center justify-center px-2">
+          <div className="flex-1 w-full max-w-screen-md flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <ChatArea messages={chatMessages} />
+            </div>
+            <div className="border-t border-gray-700">
+              <ChatInput 
+                onSendMessage={handleSendMessage}
+                disabled={!socket}
+              />
+            </div>
           </div>
         </div>
       </div>
