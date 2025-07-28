@@ -39,12 +39,15 @@ ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/src/generated/prisma/libquery_engine-linux-
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+
 # Copy the built application
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server.js ./server.js
+# Copy generated Prisma Client and Query Engine
+COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
 
 USER nextjs
 
