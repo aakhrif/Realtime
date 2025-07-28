@@ -6,11 +6,14 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { MediaPermission } from '@/components/MediaPermission';
 import { VideoRoomV2 } from '@/components/VideoRoomV2';
+import { VideoRoomMobile } from '@/components/VideoRoomMobile';
+import { useDevice } from '@/contexts/DeviceContext';
 import SocketManager from '@/lib/socketManager';
 
 type RoomState = 'loading' | 'permission-request' | 'video-room' | 'error';
 
 export default function RoomPage() {
+  const { device } = useDevice();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -155,6 +158,17 @@ export default function RoomPage() {
   const roomLanguage = 'ar'; // z.B. 'ar' für Arabisch, 'en' für Englisch
 
   if (roomState === 'video-room') {
+    if (device === 'mobile') {
+      return (
+        <VideoRoomMobile
+          roomId={roomId}
+          userName={userName!}
+          onLeaveRoom={handleLeaveRoom}
+          mediaEnabled={!!mediaStream}
+          language={roomLanguage}
+        />
+      );
+    }
     return (
       <VideoRoomV2
         roomId={roomId}

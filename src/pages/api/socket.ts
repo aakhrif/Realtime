@@ -33,7 +33,6 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
       // User joins a room
       socket.on('join-room', async ({ room, name, mediaEnabled }: { room: string; name: string; mediaEnabled?: boolean }) => {
         console.log(`🚪 ${name} (${socket.id}) joining room: ${room} | mediaEnabled: ${mediaEnabled}`);
-        
         try {
           // Leave previous room if any
           const user = users.get(socket.id);
@@ -48,33 +47,37 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
                 name: user.name
               });
             }
-            // Redis cleanup for production
-            await RoomManager.removeUserFromRoom(user.room, socket.id).catch(console.error);
+            // Redis cleanup nur in production
+            if (process.env.NODE_ENV === 'production') {
+              await RoomManager.removeUserFromRoom(user.room, socket.id).catch(console.error);
+            }
           }
 
           // Join new room
           await socket.join(room);
           const userInfo: UserInfo = { id: socket.id, name, room };
           users.set(socket.id, userInfo);
-          
+
           // Track in local memory (always works)
           if (!rooms.has(room)) {
             rooms.set(room, new Set());
           }
           rooms.get(room)?.add(socket.id);
-          
-          // Redis: User registrieren für Production (non-blocking)
-          RoomManager.addUserToRoom(room, socket.id, name).catch(err => 
-            console.warn('Redis addUser failed (non-critical):', err.message)
-          );
-          ConnectionStats.incrementConnection(room).catch(err => 
-            console.warn('Redis stats failed (non-critical):', err.message)
-          );
+
+          // Redis: User registrieren nur in production (non-blocking)
+          if (process.env.NODE_ENV === 'production') {
+            RoomManager.addUserToRoom(room, socket.id, name).catch(err => 
+              console.warn('Redis addUser failed (non-critical):', err.message)
+            );
+            ConnectionStats.incrementConnection(room).catch(err => 
+              console.warn('Redis stats failed (non-critical):', err.message)
+            );
+          }
 
           // Get ALL users in room from Socket.IO rooms (most reliable)
           const socketioRoom = io.sockets.adapter.rooms.get(room);
           const allSocketIds = Array.from(socketioRoom || []);
-          
+
           console.log(`🔍 Room ${room} analysis:`, {
             socketioRoom: allSocketIds.length,
             localMap: rooms.get(room)?.size || 0,
@@ -103,13 +106,18 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponse) => {
             id: socket.id,
             name
           });
-          
+
           console.log(`✅ User ${name} joined room ${room}. Total: ${allSocketIds.length}, Existing: ${currentUsers.length}`);
           console.log(`📋 Sending ${currentUsers.length} existing users:`, currentUsers);
 
-        } catch (error) {
+        } catch (error: any) {
           console.error('❌ Error in join-room:', error);
-          socket.emit('error', { message: 'Failed to join room' });
+          // Im development: Fehlerdetails an Client senden
+          if (process.env.NODE_ENV !== 'production') {
+            socket.emit('error', { message: error?.message || String(error) });
+          } else {
+            socket.emit('error', { message: 'Failed to join room' });
+          }
         }
       });
 
