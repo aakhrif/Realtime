@@ -199,6 +199,13 @@ export const useWebRTC = (
     }
   }, []);
 
+
+  // Prevent duplicate join-room emits
+  const joinedRoomRef = useRef(false);
+
+  // Track event handler call counts for debugging
+  const eventCallCountsRef = useRef<{ [key: string]: number }>({});
+
   // Initialize WebRTC when room and user are ready
   useEffect(() => {
     if (!socket || !roomId || !userName) {
@@ -213,11 +220,15 @@ export const useWebRTC = (
     console.log(`🚪 Setting up WebRTC for room: ${roomId}, user: ${userName}`);
 
     let mounted = true;
-    const currentPeers = peersRef.current; // Capture peers ref at effect start
+    // Capture peers ref at effect start for cleanup
+    const peersRefForCleanup = peersRef.current;
 
     const initializeWebRTC = async () => {
       if (!mounted) return;
-      
+      if (joinedRoomRef.current) {
+        console.log('🛑 Already joined room, skipping join-room emit');
+        return;
+      }
       try {
         // Use initial stream if provided, otherwise get user media (if enabled)
         let stream: MediaStream | null = null;
@@ -240,6 +251,7 @@ export const useWebRTC = (
         if (mounted && socket.connected) {
           console.log(`🚪 Joining room ${roomId} as ${userName}${enableMedia ? ' (with media)' : ' (media-free)'}`);
           socket.emit('join-room', { room: roomId, name: userName, mediaEnabled: enableMedia });
+          joinedRoomRef.current = true;
         }
       } catch (err) {
         console.error('Failed to initialize WebRTC:', err);
@@ -253,52 +265,61 @@ export const useWebRTC = (
     };
 
     // Socket event handlers for WebRTC signaling
+
     const handleUserJoined = ({ id, name }: { id: string; name: string }) => {
+      eventCallCountsRef.current['user-joined'] = (eventCallCountsRef.current['user-joined'] || 0) + 1;
+      console.log(`👥 User ${name} (${id}) joined room [call #${eventCallCountsRef.current['user-joined']}]`);
       if (!mounted) return;
-      console.log(`👥 User ${name} (${id}) joined room`);
       if (id === socket.id) return; // Don't create peer for self
-      if (currentPeers.has(id)) {
+      if (peersRef.current.has(id)) {
         console.warn(`⚠️ Peer for ${name} (${id}) already exists on user-joined, skipping.`);
         return;
       }
       console.log(`🤝 Creating initiating peer connection to ${name}`);
       createPeer(id, name, true);
+      logPeerStates('user-joined');
     };
 
+
     const handleUserLeft = ({ id, name }: { id: string; name?: string }) => {
+      eventCallCountsRef.current['user-left'] = (eventCallCountsRef.current['user-left'] || 0) + 1;
+      console.log(`👋 User ${name || id} left room [call #${eventCallCountsRef.current['user-left']}]`);
       if (!mounted) return;
-      console.log(`👋 User ${name || id} left room`);
-      const peerConnection = currentPeers.get(id);
+      const peerConnection = peersRef.current.get(id);
       if (peerConnection) {
         console.log(`🔌 Destroying peer connection with ${name || id}`);
         peerConnection.peer.destroy();
-        currentPeers.delete(id);
-        setPeers(new Map(currentPeers));
+        peersRef.current.delete(id);
+        setPeers(new Map(peersRef.current));
       } else {
         console.warn(`⚠️ Tried to destroy peer for ${name || id}, but no peer existed.`);
       }
+      logPeerStates('user-left');
     };
 
+
     const handleRoomUsers = (users: { id: string; name: string }[]) => {
+      eventCallCountsRef.current['room-users'] = (eventCallCountsRef.current['room-users'] || 0) + 1;
+      console.log(`📋 Current room users [call #${eventCallCountsRef.current['room-users']}]:`, users);
       if (!mounted) return;
-      console.log(`📋 Current room users:`, users);
-      
       users.forEach((user) => {
         // Only create peer as receiver (initiator: false) for existing users
-        if (user.id !== socket.id && !currentPeers.has(user.id)) {
+        if (user.id !== socket.id && !peersRef.current.has(user.id)) {
           console.log(`🤝 Creating receiving peer connection to ${user.name}`);
           createPeer(user.id, user.name, false);
         }
       });
     };
 
+
     const handleOffer = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
+      eventCallCountsRef.current['offer'] = (eventCallCountsRef.current['offer'] || 0) + 1;
+      console.log(`📡 Received offer from ${from} [call #${eventCallCountsRef.current['offer']}]`);
       if (!mounted) return;
-      console.log(`📡 Received offer from ${from}`);
-      if (currentPeers.has(from)) {
+      if (peersRef.current.has(from)) {
         console.warn(`⚠️ Peer for ${from} already exists on offer, skipping peer creation.`);
       }
-      const peerConnection = currentPeers.get(from);
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
         // Check signaling state before accepting offer
         const pc = peerConnection.peer as any;
@@ -314,12 +335,15 @@ export const useWebRTC = (
         const newPeer = createPeer(from, from, false);
         newPeer.signal(offer);
       }
+      logPeerStates('offer');
     };
 
+
     const handleAnswer = ({ from, answer }: { from: string; answer: RTCSessionDescriptionInit }) => {
+      eventCallCountsRef.current['answer'] = (eventCallCountsRef.current['answer'] || 0) + 1;
+      console.log(`📡 Received answer from ${from} [call #${eventCallCountsRef.current['answer']}]`);
       if (!mounted) return;
-      console.log(`📡 Received answer from ${from}`);
-      const peerConnection = currentPeers.get(from);
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
         // Check signaling state before accepting answer
         const pc = peerConnection.peer as any;
@@ -331,19 +355,42 @@ export const useWebRTC = (
         }
         peerConnection.peer.signal(answer);
       }
+      logPeerStates('answer');
     };
 
+
     const handleIceCandidate = ({ from, candidate }: { from: string; candidate: SimplePeer.SignalData }) => {
+      eventCallCountsRef.current['ice-candidate'] = (eventCallCountsRef.current['ice-candidate'] || 0) + 1;
+      console.log(`🧊 Received ICE candidate from ${from} [call #${eventCallCountsRef.current['ice-candidate']}]`);
       if (!mounted) return;
-      console.log(`🧊 Received ICE candidate from ${from}`);
-      
-      const peerConnection = currentPeers.get(from);
+      const peerConnection = peersRef.current.get(from);
       if (peerConnection) {
         peerConnection.peer.signal(candidate);
       }
     };
 
-    // Register socket event listeners
+    // Helper log: Print all current peer IDs and their signaling states
+    const logPeerStates = (context: string) => {
+      const states: Record<string, string | undefined> = {};
+      peersRef.current.forEach((peerConn, id) => {
+        const pc = (peerConn.peer as any)._pc;
+        states[id] = pc?.signalingState;
+      });
+      console.log(`[PEER STATES][${context}]`, states);
+    };
+
+
+    // Always clean up listeners before registering to avoid duplicates
+    console.log('[WebRTC] Cleaning up old socket listeners before registering new ones');
+    socket.off('user-joined', handleUserJoined);
+    socket.off('user-left', handleUserLeft);
+    socket.off('room-users', handleRoomUsers);
+    socket.off('offer', handleOffer);
+    socket.off('answer', handleAnswer);
+    socket.off('ice-candidate', handleIceCandidate);
+    socket.off('connect', initializeWebRTC);
+
+    console.log('[WebRTC] Registering socket listeners');
     socket.on('user-joined', handleUserJoined);
     socket.on('user-left', handleUserLeft);
     socket.on('room-users', handleRoomUsers);
@@ -360,13 +407,10 @@ export const useWebRTC = (
 
     return () => {
       mounted = false;
-      
+      joinedRoomRef.current = false;
       console.log('🧹 Cleaning up WebRTC connections');
-      
-      // Capture current peers reference for cleanup
-      const currentPeers = peersRef.current;
-      
-      // Cleanup event listeners
+      // Use captured peersRef for cleanup
+      console.log('[WebRTC] Cleaning up socket listeners');
       socket.off('user-joined', handleUserJoined);
       socket.off('user-left', handleUserLeft);
       socket.off('room-users', handleRoomUsers);
@@ -374,14 +418,11 @@ export const useWebRTC = (
       socket.off('answer', handleAnswer);
       socket.off('ice-candidate', handleIceCandidate);
       socket.off('connect', initializeWebRTC);
-      
-      // Cleanup peers
-      currentPeers.forEach((peerConnection) => {
+      peersRefForCleanup.forEach((peerConnection) => {
         peerConnection.peer.destroy();
       });
-      currentPeers.clear();
+      peersRefForCleanup.clear();
       setPeers(new Map());
-
       // Don't cleanup initial stream as it's provided externally
       if (localStreamRef.current && localStreamRef.current !== initialStream) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
