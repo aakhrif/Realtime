@@ -161,7 +161,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                               : 'bg-blue-500'}
                           `}
                         >
-                          {message.name.charAt(0).toUpperCase()}
+                          {(typeof message.name === 'string' && message.name.length > 0)
+                            ? message.name.charAt(0).toUpperCase()
+                            : '?'}
                         </div>
                         {/* Message Content */}
                         <div className="flex-1 min-w-0">

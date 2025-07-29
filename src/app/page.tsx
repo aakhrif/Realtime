@@ -8,20 +8,6 @@ export default function Home() {
   const [inputRoomId, setInputRoomId] = useState('');
   const [inputUserName, setInputUserName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  // const [roomExists, setRoomExists] = useState<boolean | null>(null);
-  // const [claimRoom, setClaimRoom] = useState(false);
-
-  // useEffect(() => {
-  //   if (!inputRoomId) {
-  //     setRoomExists(null);
-  //     return;
-  //   }
-  //   // Room-Existenz abfragen
-  //   fetch(`/api/room-exists?roomId=${encodeURIComponent(inputRoomId)}`)
-  //     .then(res => res.json())
-  //     .then(data => setRoomExists(data.exists))
-  //     .catch(() => setRoomExists(null));
-  // }, [inputRoomId]);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +24,6 @@ export default function Home() {
     const userName = inputUserName.trim();
     
     const url = `/room/${encodeURIComponent(roomId)}?name=${encodeURIComponent(userName)}`;
-    // if (!roomExists && claimRoom) {
-    //   url += '&claim=1';
-    // }
     router.push(url);
   };
 

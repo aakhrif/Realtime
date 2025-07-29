@@ -10,13 +10,13 @@ interface DeviceContextValue {
 
 const DeviceContext = createContext<DeviceContextValue>({
   device: 'desktop',
-  width: 1200,
+  width: 900,
 });
 
 export const useDevice = () => useContext(DeviceContext);
 
 export const DeviceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [width, setWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [width, setWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 900);
   const [device, setDevice] = useState<DeviceType>('desktop');
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const DeviceProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   useEffect(() => {
     if (width < 768) setDevice('mobile');
-    else if (width < 1024) setDevice('tablet');
+    else if (width < 900) setDevice('tablet');
     else setDevice('desktop');
   }, [width]);
 
