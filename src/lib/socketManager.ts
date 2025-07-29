@@ -85,9 +85,9 @@ class SocketManager {
             }, delay);
           } else {
             cancelled = true;
-            // Reset flags
-            (SocketManager as any).isConnecting = false;
-            (SocketManager as any).connectionPromise = null;
+            // Reset flags sauber
+            SocketManager.isConnecting = false;
+            SocketManager.connectionPromise = null;
             reject(error);
           }
         }

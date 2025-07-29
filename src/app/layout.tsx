@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { DeviceProvider } from "@/contexts/DeviceContext";
+import GhostUser from "@/lib/ghostUser";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,6 +25,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // GhostUser beim App-Start verbinden (nur Client)
+  if (typeof window !== 'undefined') {
+    GhostUser.connectToRooms(['lobby']);
+  }
   return (
     <html lang="en">
       <body
