@@ -256,24 +256,26 @@ export const useWebRTC = (
     const handleUserJoined = ({ id, name }: { id: string; name: string }) => {
       if (!mounted) return;
       console.log(`👥 User ${name} (${id}) joined room`);
-      
-      // Only existing users (not the joining user) create peer as initiator
-      if (id !== socket.id && !currentPeers.has(id)) {
-        console.log(`🤝 Creating initiating peer connection to ${name}`);
-        createPeer(id, name, true);
+      if (id === socket.id) return; // Don't create peer for self
+      if (currentPeers.has(id)) {
+        console.warn(`⚠️ Peer for ${name} (${id}) already exists on user-joined, skipping.`);
+        return;
       }
+      console.log(`🤝 Creating initiating peer connection to ${name}`);
+      createPeer(id, name, true);
     };
 
     const handleUserLeft = ({ id, name }: { id: string; name?: string }) => {
       if (!mounted) return;
       console.log(`👋 User ${name || id} left room`);
-      
       const peerConnection = currentPeers.get(id);
       if (peerConnection) {
         console.log(`🔌 Destroying peer connection with ${name || id}`);
         peerConnection.peer.destroy();
         currentPeers.delete(id);
         setPeers(new Map(currentPeers));
+      } else {
+        console.warn(`⚠️ Tried to destroy peer for ${name || id}, but no peer existed.`);
       }
     };
 
@@ -293,9 +295,19 @@ export const useWebRTC = (
     const handleOffer = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
       if (!mounted) return;
       console.log(`📡 Received offer from ${from}`);
-      
+      if (currentPeers.has(from)) {
+        console.warn(`⚠️ Peer for ${from} already exists on offer, skipping peer creation.`);
+      }
       const peerConnection = currentPeers.get(from);
       if (peerConnection) {
+        // Check signaling state before accepting offer
+        const pc = peerConnection.peer as any;
+        const state = pc._pc?.signalingState;
+        console.log(`🔍 Peer signalingState for offer: ${state}`);
+        if (state !== 'stable') {
+          console.warn(`⚠️ Ignoring offer from ${from} (invalid state: ${state})`);
+          return;
+        }
         peerConnection.peer.signal(offer);
       } else {
         console.log(`🆕 Creating new peer for incoming offer from ${from}`);
@@ -307,9 +319,16 @@ export const useWebRTC = (
     const handleAnswer = ({ from, answer }: { from: string; answer: RTCSessionDescriptionInit }) => {
       if (!mounted) return;
       console.log(`📡 Received answer from ${from}`);
-      
       const peerConnection = currentPeers.get(from);
       if (peerConnection) {
+        // Check signaling state before accepting answer
+        const pc = peerConnection.peer as any;
+        const state = pc._pc?.signalingState;
+        console.log(`🔍 Peer signalingState for answer: ${state}`);
+        if (state !== 'have-remote-offer' && state !== 'have-local-pranswer') {
+          console.warn(`⚠️ Ignoring answer from ${from} (invalid state: ${state})`);
+          return;
+        }
         peerConnection.peer.signal(answer);
       }
     };
