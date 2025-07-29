@@ -1,18 +1,24 @@
 
 "use client";
 import React, { useRef, useEffect } from "react";
-import type { UserInfo } from "@/hooks/useSocket";
+// ...existing code...
 import type { PeerConnection } from "@/hooks/useWebRTC";
 
+interface User {
+  id: string;
+  name: string;
+  room?: string;
+}
+
 interface UserListProps {
-  users: UserInfo[];
+  users: User[];
   currentUserId: string;
   peers: Map<string, PeerConnection>;
   localStream?: MediaStream | null;
 }
 
 interface UserListItemProps {
-  user: UserInfo;
+  user: User;
   currentUserId: string;
   stream?: MediaStream | null;
 }

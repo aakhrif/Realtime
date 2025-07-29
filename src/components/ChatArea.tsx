@@ -1,6 +1,6 @@
 'use client';
 
-import { ChatMessage } from '@/hooks/useSocket';
+import type { ChatMessage } from '@/contexts/SocketContext';
 import { useEffect, useRef, useState } from 'react';
 
 interface ChatAreaProps {

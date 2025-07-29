@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useSocket } from '@/contexts/SocketContext';
 import { ChatArea } from './ChatArea';
 import { ChatInput } from './ChatInput';
 import { useWebRTC } from '@/hooks/useWebRTC';
@@ -26,81 +27,9 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
     peers
   } = useWebRTC(roomId, userName, null, initialStream, mediaEnabled);
 
-  // Typen lokal definieren, falls kein Import möglich
-  type ChatMessage = {
-    id: string;
-    name: string;
-    message: string;
-    timestamp: string;
-  };
-  type UserInfo = {
-    id: string;
-    name: string;
-    room: string;
-  };
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [userList, setUserList] = useState<UserInfo[]>([]);
-  const [socketReady, setSocketReady] = useState(false);
-
-  // Socket.IO Setup für User-Events
-  React.useEffect(() => {
-    let socket: import('socket.io-client').Socket | null = null;
-    let retryCount = 0;
-    const maxRetries = 5;
-    const retryDelay = 800;
-
-    const connectSocket = async () => {
-      const ioClient = (await import('socket.io-client')).default;
-      socket = ioClient({ path: '/api/socket', transports: ['websocket', 'polling'] });
-
-      socket.on('connect', () => setSocketReady(true));
-      socket.on('disconnect', () => setSocketReady(false));
-
-      // Fehler-Handler für Verbindungsprobleme
-      socket.on('connect_error', (err: Error) => {
-        setSocketReady(false);
-        if (err && err.message && err.message.includes('server error')) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(() => {
-              socket?.disconnect();
-              connectSocket();
-            }, retryDelay);
-          } else {
-            // Optional: User-Feedback nach zu vielen Fehlversuchen
-            // z.B. setRoomState('error');
-          }
-        }
-      });
-
-      // Join Room beim Mount (nutze Props)
-      socket.emit('join-room', { room: roomId, name: userName });
-
-      // Initiale User-Liste
-      socket.on('room-users', (users: { id: string; name: string }[]) => {
-        setUserList(users.map(u => ({ ...u, room: roomId })));
-      });
-      // User joined
-      socket.on('user-joined', (user: { id: string; name: string }) => {
-        setUserList((prev: UserInfo[]) => {
-          if (prev.find(u => u.id === user.id)) return prev;
-          return [...prev, { ...user, room: roomId }];
-        });
-      });
-      // User left
-      socket.on('user-left', (user: { id: string; name: string }) => {
-        setUserList((prev: UserInfo[]) => prev.filter(u => u.id !== user.id));
-      });
-    };
-    connectSocket();
-
-    // Cleanup
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
-    };
-  }, [roomId, userName]);
+  // User und Chat kommen jetzt aus Context
+  const { roomUsers, chatMessages, sendChatMessage } = useSocket();
+  const userList = roomUsers.map(u => ({ ...u, room: roomId }));
 
   // Video-Streams: Eigenes Video + alle Peers
   const peerStreams = Array.from(peers.values()).map(p => ({ id: p.id, name: p.name, stream: p.stream }));
@@ -157,18 +86,10 @@ export const VideoRoomMobile: React.FC<VideoRoomMobileProps> = ({
             <div className="text-white font-bold">Chat</div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <ChatArea messages={chatMessages} />
+          <ChatArea messages={chatMessages} />
           </div>
           <div className="border-t border-gray-800">
-            <ChatInput onSendMessage={msg => setChatMessages(m => [
-              ...m,
-              {
-                id: Date.now().toString(),
-                name: userName,
-                message: msg,
-                timestamp: new Date().toISOString()
-              }
-            ])} />
+            <ChatInput onSendMessage={sendChatMessage} />
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { DeviceProvider } from "@/contexts/DeviceContext";
+import { SocketProvider } from "@/contexts/SocketContext";
 import GhostUser from "@/lib/ghostUser";
 import "./globals.css";
 
@@ -34,9 +35,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DeviceProvider>
-          {children}
-        </DeviceProvider>
+        <SocketProvider>
+          <DeviceProvider>
+            {children}
+          </DeviceProvider>
+        </SocketProvider>
       </body>
     </html>
   );

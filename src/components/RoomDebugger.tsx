@@ -1,19 +1,14 @@
 // Debug Component für Multi-User Testing
 'use client';
 
-import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useState } from 'react';
+import { useSocket } from '@/contexts/SocketContext';
 
-interface DebugUser {
-  id: string;
-  name: string;
-}
+// ...existing code...
 
 export const RoomDebugger = ({ roomId }: { roomId: string }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [users, setUsers] = useState<DebugUser[]>([]);
+  const { roomUsers, joinRoom, isConnected } = useSocket();
   const [events, setEvents] = useState<string[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // New: Toggle for debug panel
 
   const addEvent = (event: string) => {
@@ -21,61 +16,11 @@ export const RoomDebugger = ({ roomId }: { roomId: string }) => {
     setEvents(prev => [`[${timestamp}] ${event}`, ...prev.slice(0, 19)]);
   };
 
-  useEffect(() => {
-    const newSocket = io({
-      path: '/api/socket',
-      transports: ['websocket', 'polling']
-    });
+  // Events werden weiterhin lokal gesammelt
 
-    newSocket.on('connect', () => {
-      setIsConnected(true);
-      addEvent(`✅ Connected: ${newSocket.id}`);
-    });
-
-    newSocket.on('disconnect', () => {
-      setIsConnected(false);
-      addEvent('❌ Disconnected');
-    });
-
-    newSocket.on('user-joined', ({ id, name }: { id: string; name: string }) => {
-      addEvent(`👥 User joined: ${name} (${id})`);
-      setUsers(prev => [...prev.filter(u => u.id !== id), { id, name }]);
-    });
-
-    newSocket.on('user-left', ({ id, name }: { id: string; name: string }) => {
-      addEvent(`👋 User left: ${name} (${id})`);
-      setUsers(prev => prev.filter(u => u.id !== id));
-    });
-
-    newSocket.on('room-users', (roomUsers: DebugUser[]) => {
-      addEvent(`📋 Room users received: ${roomUsers.length} users`);
-      setUsers(roomUsers);
-    });
-
-    newSocket.on('offer', ({ from }: { from: string }) => {
-      addEvent(`📡 WebRTC Offer from: ${from}`);
-    });
-
-    newSocket.on('answer', ({ from }: { from: string }) => {
-      addEvent(`📡 WebRTC Answer from: ${from}`);
-    });
-
-    newSocket.on('ice-candidate', ({ from }: { from: string }) => {
-      addEvent(`🧊 ICE Candidate from: ${from}`);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
-
-  const joinRoom = (userName: string) => {
-    if (socket) {
-      socket.emit('join-room', { room: roomId, name: userName });
-      addEvent(`🚪 Joining room ${roomId} as ${userName}`);
-    }
+  const handleJoinRoom = (userName: string) => {
+    joinRoom(roomId, userName);
+    addEvent(`🚪 Joining room ${roomId} as ${userName}`);
   };
 
   return (
@@ -113,12 +58,12 @@ export const RoomDebugger = ({ roomId }: { roomId: string }) => {
           </div>
 
           <div className="mb-3">
-            <h4 className="font-semibold">Users in Room ({users.length}):</h4>
-            {users.length === 0 ? (
+            <h4 className="font-semibold">Users in Room ({roomUsers.length}):</h4>
+            {roomUsers.length === 0 ? (
               <p className="text-gray-500">No users</p>
             ) : (
               <ul className="text-xs">
-                {users.map(user => (
+                {roomUsers.map(user => (
                   <li key={user.id} className="truncate">
                     👤 {user.name} ({user.id.slice(0, 8)}...)
                   </li>
@@ -129,7 +74,7 @@ export const RoomDebugger = ({ roomId }: { roomId: string }) => {
 
           <div className="mb-3">
             <button 
-              onClick={() => joinRoom(`User-${Math.floor(Math.random() * 1000)}`)}
+              onClick={() => handleJoinRoom(`User-${Math.floor(Math.random() * 1000)}`)}
               className="w-full bg-blue-500 text-white px-2 py-1 rounded text-xs"
               disabled={!isConnected}
             >

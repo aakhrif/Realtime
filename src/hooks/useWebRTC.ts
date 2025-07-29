@@ -96,8 +96,12 @@ export const useWebRTC = (
 
   // Create peer connection
   const createPeer = useCallback((userId: string, userName: string, initiator: boolean): SimplePeer.Instance => {
+    // Prevent duplicate peer creation
+    if (peersRef.current.has(userId)) {
+      console.log(`⚠️ Peer for ${userName} (${userId}) already exists, skipping creation.`);
+      return peersRef.current.get(userId)!.peer;
+    }
     console.log(`🔗 Creating ${initiator ? 'initiating' : 'receiving'} peer connection for ${userName} (${userId})`);
-    
     const peer = new SimplePeer({
       initiator,
       trickle: false,
@@ -118,7 +122,6 @@ export const useWebRTC = (
 
     peer.on('signal', (signal: SimplePeer.SignalData) => {
       console.log(`📤 Sending ${signal.type} signal to ${userName} (${userId})`);
-      
       if (signal.type === 'offer') {
         socket.emit('offer', { to: userId, offer: signal });
       } else if (signal.type === 'answer') {
@@ -130,14 +133,12 @@ export const useWebRTC = (
 
     peer.on('stream', (remoteStream: MediaStream) => {
       console.log(`📺 Received stream from ${userName} (${userId})`);
-      
       const peerConnection: PeerConnection = {
         id: userId,
         name: userName,
         peer,
         stream: remoteStream
       };
-      
       peersRef.current.set(userId, peerConnection);
       setPeers(new Map(peersRef.current));
     });
@@ -148,12 +149,10 @@ export const useWebRTC = (
 
     peer.on('error', (err: Error) => {
       console.error(`❌ Peer connection error with ${userName}:`, err);
-      // Unterdrücke User-Initiated Abort Fehler (z.B. wenn User Raum verlässt)
       if (
         err.message?.includes('User-Initiated Abort') ||
         err.message?.includes('reason=Close called')
       ) {
-        // Kein setError, Systemnachricht wird im Chat angezeigt
         return;
       }
       setError(`Connection failed with user ${userName}: ${err.message}`);
@@ -172,7 +171,6 @@ export const useWebRTC = (
       peer,
       stream: undefined
     };
-    
     peersRef.current.set(userId, tempPeerConnection);
     setPeers(new Map(peersRef.current));
 
@@ -259,7 +257,7 @@ export const useWebRTC = (
       if (!mounted) return;
       console.log(`👥 User ${name} (${id}) joined room`);
       
-      // Create peer connection as initiator for the new user
+      // Only existing users (not the joining user) create peer as initiator
       if (id !== socket.id && !currentPeers.has(id)) {
         console.log(`🤝 Creating initiating peer connection to ${name}`);
         createPeer(id, name, true);
@@ -284,6 +282,7 @@ export const useWebRTC = (
       console.log(`📋 Current room users:`, users);
       
       users.forEach((user) => {
+        // Only create peer as receiver (initiator: false) for existing users
         if (user.id !== socket.id && !currentPeers.has(user.id)) {
           console.log(`🤝 Creating receiving peer connection to ${user.name}`);
           createPeer(user.id, user.name, false);

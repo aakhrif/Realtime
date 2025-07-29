@@ -8,11 +8,21 @@ interface User {
   name: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  name: string;
+  message: string;
+  timestamp: string;
+  type: 'error' | 'join' | 'info' | 'leave' | undefined;
+}
+
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   currentRoom: string | null;
   roomUsers: User[];
+  chatMessages: ChatMessage[];
+  sendChatMessage: (message: string) => void;
   joinRoom: (roomId: string, userName: string) => void;
   leaveRoom: () => void;
   error: string | null;
@@ -26,7 +36,7 @@ export const useSocket = () => {
     throw new Error('useSocket must be used within a SocketProvider');
   }
   return context;
-};
+}
 
 interface SocketProviderProps {
   children: React.ReactNode;
@@ -34,26 +44,21 @@ interface SocketProviderProps {
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
   const socketRef = useRef<Socket | null>(null);
   const currentUserName = useRef<string>('');
 
-  // Initialize socket connection (only once)
   useEffect(() => {
     console.log('🔌 SocketProvider: Initializing Socket.IO connection...');
-    
-    const newSocket = io({
+    const newSocket: Socket = io({
       path: '/api/socket',
       transports: ['polling'],
-      timeout: 20000,
-      forceNew: true,
-      upgrade: false
+      timeout: 20000
     });
-
     socketRef.current = newSocket;
     setSocket(newSocket);
 
@@ -71,20 +76,22 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       setRoomUsers([]);
     });
 
-    newSocket.on('error', (err) => {
+    newSocket.on('error', (err: { message?: string }) => {
       console.error('❌ SocketProvider: Error:', err);
-      setError(err.message || 'Socket connection error');
+      setError(err?.message || 'Socket connection error');
     });
 
     // Room events
-    newSocket.on('joined-room', ({ room, users }: { room: string; users: string[] }) => {
+    newSocket.on('joined-room', (payload: { room: string; users: string[] }) => {
+      const { room, users } = payload;
       console.log(`✅ SocketProvider: Joined room ${room} with users:`, users);
       setCurrentRoom(room);
       setRoomUsers(users.map(id => ({ id, name: `User-${id.slice(-4)}` })));
       setError(null);
     });
 
-    newSocket.on('user-joined', ({ id, name }: { id: string; name: string }) => {
+    newSocket.on('user-joined', (payload: { id: string; name: string }) => {
+      const { id, name } = payload;
       console.log(`👥 SocketProvider: User ${name} (${id}) joined`);
       setRoomUsers(prev => {
         if (prev.find(user => user.id === id)) return prev;
@@ -92,9 +99,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       });
     });
 
-    newSocket.on('user-left', ({ id, name }: { id: string; name: string }) => {
+    newSocket.on('user-left', (payload: { id: string; name: string }) => {
+      const { id, name } = payload;
       console.log(`👋 SocketProvider: User ${name} (${id}) left`);
       setRoomUsers(prev => prev.filter(user => user.id !== id));
+    });
+
+    // Chat events
+    newSocket.on('chat-message', (msg: ChatMessage) => {
+      setChatMessages(prev => [...prev, msg]);
     });
 
     // Cleanup on unmount
@@ -109,7 +122,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       setError('Socket not connected');
       return;
     }
-
     console.log(`🚪 SocketProvider: Joining room ${roomId} as ${userName}`);
     currentUserName.current = userName;
     socket.emit('join-room', { room: roomId, name: userName });
@@ -117,11 +129,24 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   const leaveRoom = () => {
     if (!socket || !currentRoom) return;
-
     console.log(`🚪 SocketProvider: Leaving room ${currentRoom}`);
     socket.emit('leave-room', { room: currentRoom });
     setCurrentRoom(null);
     setRoomUsers([]);
+  };
+
+  const sendChatMessage = (message: string) => {
+    if (socket && currentRoom) {
+      const msg: ChatMessage = {
+        id: `${socket.id}-${Date.now()}`,
+        name: 'You',
+        message,
+        timestamp: new Date().toISOString(),
+        type: 'info',
+      };
+      socket.emit('chat-message', msg);
+      setChatMessages(prev => [...prev, msg]);
+    }
   };
 
   return (
@@ -131,6 +156,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         isConnected,
         currentRoom,
         roomUsers,
+        chatMessages,
+        sendChatMessage,
         joinRoom,
         leaveRoom,
         error,

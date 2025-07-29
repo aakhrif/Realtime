@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useDevice } from '../contexts/DeviceContext';
 
 interface MediaPermissionProps {
   onPermissionGranted: (stream: MediaStream) => void;
@@ -9,48 +10,27 @@ interface MediaPermissionProps {
   isSocketReady?: boolean; // Neu: Socket.IO-Status
 }
 
-// Mobile Detection
-const isMobile = () => {
-  if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
-
-// HTTPS Detection
-const isSecureContext = () => {
-  if (typeof window === 'undefined') return false;
-  return window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-};
 
 export const MediaPermission: React.FC<MediaPermissionProps> = ({
   onPermissionGranted,
   onPermissionDenied,
   onEnterWithoutMedia,
-  isSocketReady
 }) => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deviceInfo, setDeviceInfo] = useState<{
-    isMobile: boolean;
-    isSecure: boolean;
-    browser: string;
-  } | null>(null);
-
-  useEffect(() => {
-    // Device Detection für bessere Mobile-Unterstützung
-    setDeviceInfo({
-      isMobile: isMobile(),
-      isSecure: isSecureContext(),
-      browser: navigator.userAgent.includes('iPhone') ? 'Safari iOS' : 
-               navigator.userAgent.includes('Android') ? 'Chrome Android' : 'Desktop'
-    });
-  }, []);
+  const { device } = useDevice();
+  const isSecure = typeof window !== 'undefined' ? (window.location.protocol === 'https:' || window.location.hostname === 'localhost') : false;
+  const browser = typeof window !== 'undefined' ? (
+    navigator.userAgent.includes('iPhone') ? 'Safari iOS' : 
+    navigator.userAgent.includes('Android') ? 'Chrome Android' : 'Desktop'
+  ) : 'Desktop';
 
   const requestPermissions = async () => {
     setIsRequesting(true);
     setError(null);
 
     // Mobile-spezifische Warnung für HTTPS
-    if (deviceInfo?.isMobile && !deviceInfo?.isSecure) {
+    if (device === 'mobile' && !isSecure) {
       const httpsError = 'Mobile Browser benötigen HTTPS für Kamera-Zugriff. Bitte nutzen Sie eine sichere Verbindung.';
       setError(httpsError);
       onPermissionDenied(httpsError);
@@ -88,9 +68,9 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
         }
       };
 
-      const constraints = deviceInfo?.isMobile ? mobileConstraints : desktopConstraints;
+      const constraints = device === 'mobile' ? mobileConstraints : desktopConstraints;
       
-      console.log(`🎥 Requesting media permissions for ${deviceInfo?.browser}...`, constraints);
+      console.log(`🎥 Requesting media permissions for ${browser}...`, constraints);
       
       // Try progressive fallback for mobile
       let stream: MediaStream;
@@ -100,7 +80,7 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
       } catch (primaryError) {
         console.warn('⚠️ Primary constraints failed, trying fallback...', primaryError);
         
-        if (deviceInfo?.isMobile) {
+        if (device === 'mobile') {
           // Mobile fallback: Lower quality
           const mobileFallback = {
             video: {
@@ -145,11 +125,11 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
       
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError') {
-          errorMessage = deviceInfo?.isMobile 
+          errorMessage = device === 'mobile'
             ? 'Kamera-Zugriff verweigert. Auf Mobile: Gehen Sie zu Browser-Einstellungen → Website-Einstellungen → Kamera erlauben.'
             : 'Kamera- und Mikrofonzugriff wurde verweigert. Bitte erlauben Sie den Zugriff in den Browser-Einstellungen.';
         } else if (err.name === 'NotFoundError') {
-          errorMessage = deviceInfo?.isMobile
+          errorMessage = device === 'mobile'
             ? 'Keine Kamera gefunden. Überprüfen Sie, ob eine andere App die Kamera verwendet.'
             : 'Keine Kamera oder Mikrofon gefunden. Bitte stellen Sie sicher, dass Geräte angeschlossen sind.';
         } else if (err.name === 'NotReadableError') {
@@ -211,13 +191,13 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
         )}
 
         {/* Mobile-spezifische Hinweise */}
-        {deviceInfo?.isMobile && (
+        {device === 'mobile' && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center mb-2">
               <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
               </svg>
-              <span className="font-medium text-blue-800">Mobile Browser ({deviceInfo.browser})</span>
+              <span className="font-medium text-blue-800">Mobile Browser ({browser})</span>
             </div>
             <div className="text-sm text-blue-700 space-y-1">
               <p>• HTTPS erforderlich für Kamera-Zugriff</p>
@@ -228,7 +208,7 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
         )}
 
         {/* HTTPS Warnung für Mobile */}
-        {deviceInfo?.isMobile && !deviceInfo?.isSecure && (
+        {device === 'mobile' && !isSecure && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center mb-2">
               <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -271,10 +251,10 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
           disabled={
             isRequesting ||
             !!browserError ||
-            (deviceInfo?.isMobile && !deviceInfo?.isSecure)
+            (device === 'mobile' && !isSecure)
           }
           className={`w-full font-semibold py-3 px-6 rounded-lg transition duration-200 ${
-            isRequesting || browserError || (deviceInfo?.isMobile && !deviceInfo?.isSecure)
+            isRequesting || browserError || (device === 'mobile' && !isSecure)
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white transform hover:scale-105'
           }`}
@@ -284,10 +264,10 @@ export const MediaPermission: React.FC<MediaPermissionProps> = ({
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
               Zugriff wird angefragt...
             </div>
-          ) : deviceInfo?.isMobile && !deviceInfo?.isSecure ? (
+          ) : device === 'mobile' && !isSecure ? (
             'HTTPS erforderlich für Mobile'
           ) : (
-            `${deviceInfo?.isMobile ? 'Mobile ' : ''}Kamera & Mikrofon aktivieren`
+            `${device === 'mobile' ? 'Mobile ' : ''}Kamera & Mikrofon aktivieren`
           )}
         </button>
 
